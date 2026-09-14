@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="custom_components/heat_conductor/brand/logo@2x.png" alt="HeatConductor" width="325">
+</p>
+
 # HeatConductor
 
 Intelligente Heizungssteuerung für Home Assistant: HeatConductor wertet Thermostate,

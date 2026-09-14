@@ -3,6 +3,7 @@ name = "heat-conductor"
 version = "0.1.0"
 description = "HeatConductor – intelligente Heizungssteuerung für Home Assistant"
 requires-python = ">=3.14"
+license = "MIT"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
