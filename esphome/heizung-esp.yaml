@@ -234,3 +234,26 @@ button:
   - platform: restart
     name: "Neustart"
     entity_category: config
+  # Sucht den 1-Wire-Bus neu ab (ESPHome sucht sonst nur beim Start) und zeigt die Adressen.
+  - platform: template
+    name: "1-Wire Suche"
+    entity_category: diagnostic
+    on_press:
+      - lambda: |-
+          id(pipe_bus).search();
+          std::string text;
+          for (auto address : id(pipe_bus).get_devices()) {
+            char buffer[20];
+            snprintf(buffer, sizeof(buffer), "0x%016llx", (unsigned long long) address);
+            if (!text.empty()) text += ", ";
+            text += buffer;
+          }
+          if (text.empty()) text = "keine";
+          ESP_LOGI("one_wire", "Gefundene 1-Wire-Geräte: %s", text.c_str());
+          id(one_wire_devices).publish_state(text);
+
+text_sensor:
+  - platform: template
+    name: "1-Wire Geräte"
+    id: one_wire_devices
+    entity_category: diagnostic
