@@ -1,0 +1,223 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HeatConductor einrichten",
+        "description": "Wähle die zentralen Entitäten. Räume fügst du danach über „Raum hinzufügen“ hinzu. HeatConductor startet im Beobachtungsmodus und schaltet nichts, bis du den Beobachtungsmodus ausschaltest.",
+        "data": {
+          "name": "Name",
+          "boiler_switch": "Kessel-Relais",
+          "outdoor_sensors": "Außentemperatur-Sensoren",
+          "weather": "Wetter-Entität (Fallback)",
+          "flow_temperature": "Vorlauftemperatur",
+          "return_temperature": "Rücklauftemperatur",
+          "gas_flow": "Gasdurchfluss (m³/h)",
+          "burner_sensor": "Sensor „Brenner aktiv“"
+        },
+        "data_description": {
+          "boiler_switch": "Schalter, der den Kessel freigibt (z. B. Shelly an Klemme 3-4). Im Beobachtungsmodus optional.",
+          "outdoor_sensors": "Mehrere Sensoren werden kombiniert; ein von der Sonne beschienener Ausreißer wird ignoriert.",
+          "gas_flow": "Damit wird erkannt, ob der Brenner tatsächlich brennt.",
+          "burner_sensor": "Optional, z. B. aus der Kesseldiagnose. Hat Vorrang vor dem Gasdurchfluss."
+        }
+      }
+    },
+    "error": {
+      "outdoor_required": "Wähle mindestens einen Außensensor oder eine Wetter-Entität."
+    },
+    "abort": {
+      "already_configured": "HeatConductor ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HeatConductor-Optionen",
+        "menu_options": {
+          "entities": "Zentrale Entitäten",
+          "parameters": "Regelparameter"
+        }
+      },
+      "entities": {
+        "title": "Zentrale Entitäten",
+        "data": {
+          "boiler_switch": "Kessel-Relais",
+          "outdoor_sensors": "Außentemperatur-Sensoren",
+          "weather": "Wetter-Entität (Fallback)",
+          "flow_temperature": "Vorlauftemperatur",
+          "return_temperature": "Rücklauftemperatur",
+          "gas_flow": "Gasdurchfluss (m³/h)",
+          "burner_sensor": "Sensor „Brenner aktiv“"
+        }
+      },
+      "parameters": {
+        "title": "Regelparameter",
+        "data": {
+          "start_threshold": "Start-Schwelle (Gesamtbedarf)",
+          "start_confirm": "Bestätigungszeit für den Start",
+          "stop_threshold": "Stopp-Schwelle (Gesamtbedarf)",
+          "immediate_start_deficit": "Sofortstart ab Raumdefizit",
+          "deficit_full_scale": "Defizit für 100 % Raumbedarf",
+          "min_run": "Mindestlaufzeit Brenner",
+          "min_pause": "Mindestpause",
+          "max_starts_per_hour": "Maximale Starts pro Stunde",
+          "heating_limit": "Heizgrenze (geglättete Außentemperatur)",
+          "frost_limit": "Frostschutz-Raumtemperatur",
+          "max_flow_temperature": "Maximale Vorlauftemperatur",
+          "stale_after": "Werte gelten als veraltet nach",
+          "manual_override": "Pause nach manuellem Schalten",
+          "outdoor_smoothing": "Glättung der Außentemperatur",
+          "burner_flow_threshold": "Gasdurchfluss ab dem der Brenner als an gilt"
+        },
+        "data_description": {
+          "start_threshold": "Der Kessel startet, wenn der gewichtete Bedarf aller Räume für die Bestätigungszeit über diesem Wert liegt.",
+          "immediate_start_deficit": "Liegt ein Raum so weit unter seinem Sollwert, startet der Kessel ohne Bestätigungszeit.",
+          "heating_limit": "Über dieser geglätteten Außentemperatur bleibt der Kessel aus (außer im Komfort-Modus und bei Frostschutz)."
+        }
+      }
+    },
+    "error": {
+      "outdoor_required": "Wähle mindestens einen Außensensor oder eine Wetter-Entität."
+    }
+  },
+  "config_subentries": {
+    "room": {
+      "initiator_flow": {
+        "user": "Raum hinzufügen",
+        "reconfigure": "Raum bearbeiten"
+      },
+      "entry_type": "Raum",
+      "step": {
+        "user": {
+          "title": "Raum hinzufügen",
+          "data": {
+            "name": "Name",
+            "kind": "Regelung",
+            "climates": "Thermostate",
+            "valves": "Sensoren Ventilöffnung",
+            "room_temperature": "Raumtemperatur-Sensor",
+            "windows": "Fensterkontakte",
+            "weight": "Gewichtung"
+          },
+          "data_description": {
+            "climates": "Climate-Entitäten des Raums; deren Solltemperatur wird verwendet.",
+            "valves": "Sensoren mit der Ventilöffnung in % (bei HomematicIP: „… Heating“).",
+            "room_temperature": "Hat Vorrang vor der Temperatur des Thermostats.",
+            "weight": "Anteil des Raums am Gesamtbedarf, z. B. nach Heizkörpergröße."
+          }
+        },
+        "reconfigure": {
+          "title": "Raum bearbeiten",
+          "data": {
+            "name": "Name",
+            "kind": "Regelung",
+            "climates": "Thermostate",
+            "valves": "Sensoren Ventilöffnung",
+            "room_temperature": "Raumtemperatur-Sensor",
+            "windows": "Fensterkontakte",
+            "weight": "Gewichtung"
+          }
+        }
+      },
+      "error": {
+        "regulated_needs_inputs": "Ein geregelter Raum braucht mindestens ein Thermostat oder einen Ventil-Sensor.",
+        "monitor_needs_temperature": "Ein überwachter Raum braucht einen Temperatursensor oder ein Thermostat."
+      },
+      "abort": {
+        "reconfigure_successful": "Raum aktualisiert."
+      }
+    }
+  },
+  "selector": {
+    "room_kind": {
+      "options": {
+        "regulated": "Geregelt (Thermostate, erzeugt Wärmebedarf)",
+        "monitor": "Nur überwachen (z. B. Handventil)"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "heat_request": { "name": "Wärmeanforderung" },
+      "burner_active": { "name": "Brenner aktiv" },
+      "problem": { "name": "Störung" }
+    },
+    "select": {
+      "operating_mode": {
+        "name": "Betriebsmodus",
+        "state": {
+          "auto": "Automatik",
+          "comfort": "Komfort",
+          "eco": "Eco",
+          "away": "Abwesend",
+          "vacation": "Urlaub",
+          "frost_protection": "Frostschutz",
+          "off": "Aus"
+        }
+      }
+    },
+    "sensor": {
+      "total_demand": { "name": "Gesamtbedarf" },
+      "boiler_state": {
+        "name": "Kesselstatus",
+        "state": {
+          "starting": "Startet",
+          "off": "Aus",
+          "heating": "Heizt",
+          "frost_protection": "Frostschutz",
+          "summer": "Sommer",
+          "manual": "Manuell",
+          "disabled": "Deaktiviert",
+          "failsafe": "Sicherheitsabschaltung"
+        }
+      },
+      "decision_reason": {
+        "name": "Entscheidungsgrund",
+        "state": {
+          "startup": "Start, warte auf Daten",
+          "automation_disabled": "Automatik deaktiviert",
+          "manual_override": "Manuell geschaltet",
+          "relay_unavailable": "Relais nicht erreichbar",
+          "no_data": "Keine gültigen Raumdaten",
+          "overtemperature": "Vorlauf zu heiß",
+          "frost_protection": "Frostschutz",
+          "mode_off": "Modus Aus",
+          "frost_only": "Nur Frostschutz",
+          "summer_mode": "Heizgrenze überschritten",
+          "no_demand": "Kein Wärmebedarf",
+          "waiting_confirmation": "Bedarf wird bestätigt",
+          "waiting_min_pause": "Wartet auf Mindestpause",
+          "waiting_max_starts": "Max. Starts pro Stunde erreicht",
+          "demand_start": "Start wegen Wärmebedarf",
+          "deficit_start": "Start wegen Temperaturdefizit",
+          "demand_continues": "Heizt, Bedarf besteht",
+          "min_runtime": "Mindestlaufzeit",
+          "demand_satisfied": "Bedarf gedeckt"
+        }
+      },
+      "outdoor_temperature": { "name": "Außentemperatur" },
+      "outdoor_temperature_smoothed": { "name": "Außentemperatur geglättet" },
+      "boiler_starts_today": { "name": "Kesselstarts heute" },
+      "boiler_runtime_today": { "name": "Kessellaufzeit heute" },
+      "burner_starts_today": { "name": "Brennerstarts heute" },
+      "burner_runtime_today": { "name": "Brennerlaufzeit heute" },
+      "temperature_spread": { "name": "Spreizung Vor-/Rücklauf" },
+      "room_demand": { "name": "Bedarf" },
+      "room_temperature": { "name": "Temperatur" },
+      "room_status": {
+        "name": "Status",
+        "state": {
+          "ok": "OK",
+          "degraded": "Teilweise fehlende Daten",
+          "stale": "Keine gültigen Daten",
+          "window_open": "Fenster offen",
+          "monitor_only": "Nur überwacht"
+        }
+      }
+    },
+    "switch": {
+      "automation": { "name": "Automatik" },
+      "observation_mode": { "name": "Beobachtungsmodus" }
+    }
+  }
+}

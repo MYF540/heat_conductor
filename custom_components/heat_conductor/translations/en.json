@@ -1,0 +1,223 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up HeatConductor",
+        "description": "Select the central entities. Rooms are added afterwards via \"Add room\". HeatConductor starts in observation mode and does not switch anything until you turn observation mode off.",
+        "data": {
+          "name": "Name",
+          "boiler_switch": "Boiler relay",
+          "outdoor_sensors": "Outdoor temperature sensors",
+          "weather": "Weather entity (fallback)",
+          "flow_temperature": "Flow temperature",
+          "return_temperature": "Return temperature",
+          "gas_flow": "Gas flow (m³/h)",
+          "burner_sensor": "Burner active sensor"
+        },
+        "data_description": {
+          "boiler_switch": "Switch that releases the boiler (e.g. Shelly on terminals 3-4). Optional during observation.",
+          "outdoor_sensors": "Several sensors are combined; a sun-exposed outlier is ignored.",
+          "gas_flow": "Used to detect whether the burner actually fires.",
+          "burner_sensor": "Optional, e.g. from boiler diagnostics. Takes precedence over gas flow."
+        }
+      }
+    },
+    "error": {
+      "outdoor_required": "Select at least one outdoor sensor or a weather entity."
+    },
+    "abort": {
+      "already_configured": "HeatConductor is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HeatConductor options",
+        "menu_options": {
+          "entities": "Central entities",
+          "parameters": "Control parameters"
+        }
+      },
+      "entities": {
+        "title": "Central entities",
+        "data": {
+          "boiler_switch": "Boiler relay",
+          "outdoor_sensors": "Outdoor temperature sensors",
+          "weather": "Weather entity (fallback)",
+          "flow_temperature": "Flow temperature",
+          "return_temperature": "Return temperature",
+          "gas_flow": "Gas flow (m³/h)",
+          "burner_sensor": "Burner active sensor"
+        }
+      },
+      "parameters": {
+        "title": "Control parameters",
+        "data": {
+          "start_threshold": "Start threshold (total demand)",
+          "start_confirm": "Start confirmation time",
+          "stop_threshold": "Stop threshold (total demand)",
+          "immediate_start_deficit": "Immediate start at room deficit",
+          "deficit_full_scale": "Deficit for 100 % room demand",
+          "min_run": "Minimum burner run time",
+          "min_pause": "Minimum pause",
+          "max_starts_per_hour": "Maximum starts per hour",
+          "heating_limit": "Heating limit (smoothed outdoor temperature)",
+          "frost_limit": "Frost protection room temperature",
+          "max_flow_temperature": "Maximum flow temperature",
+          "stale_after": "Values count as outdated after",
+          "manual_override": "Pause after manual switching",
+          "outdoor_smoothing": "Outdoor temperature smoothing",
+          "burner_flow_threshold": "Gas flow that counts as burner on"
+        },
+        "data_description": {
+          "start_threshold": "The boiler starts when the weighted demand of all rooms stays above this value for the confirmation time.",
+          "immediate_start_deficit": "A room this far below its target starts the boiler without confirmation.",
+          "heating_limit": "Above this smoothed outdoor temperature the boiler stays off (except in comfort mode and for frost protection)."
+        }
+      }
+    },
+    "error": {
+      "outdoor_required": "Select at least one outdoor sensor or a weather entity."
+    }
+  },
+  "config_subentries": {
+    "room": {
+      "initiator_flow": {
+        "user": "Add room",
+        "reconfigure": "Edit room"
+      },
+      "entry_type": "Room",
+      "step": {
+        "user": {
+          "title": "Add room",
+          "data": {
+            "name": "Name",
+            "kind": "Control",
+            "climates": "Thermostats",
+            "valves": "Valve position sensors",
+            "room_temperature": "Room temperature sensor",
+            "windows": "Window contacts",
+            "weight": "Weight"
+          },
+          "data_description": {
+            "climates": "Climate entities of the room; their target temperature is used.",
+            "valves": "Sensors reporting the valve opening in %.",
+            "room_temperature": "Preferred over the thermostat's own temperature.",
+            "weight": "Share of this room in the total demand, e.g. by radiator size."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit room",
+          "data": {
+            "name": "Name",
+            "kind": "Control",
+            "climates": "Thermostats",
+            "valves": "Valve position sensors",
+            "room_temperature": "Room temperature sensor",
+            "windows": "Window contacts",
+            "weight": "Weight"
+          }
+        }
+      },
+      "error": {
+        "regulated_needs_inputs": "A regulated room needs at least one thermostat or valve sensor.",
+        "monitor_needs_temperature": "A monitored room needs a temperature sensor or thermostat."
+      },
+      "abort": {
+        "reconfigure_successful": "Room updated."
+      }
+    }
+  },
+  "selector": {
+    "room_kind": {
+      "options": {
+        "regulated": "Regulated (thermostats, creates heat demand)",
+        "monitor": "Monitor only (e.g. manual valve)"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "heat_request": { "name": "Heat request" },
+      "burner_active": { "name": "Burner active" },
+      "problem": { "name": "Problem" }
+    },
+    "select": {
+      "operating_mode": {
+        "name": "Operating mode",
+        "state": {
+          "auto": "Auto",
+          "comfort": "Comfort",
+          "eco": "Eco",
+          "away": "Away",
+          "vacation": "Vacation",
+          "frost_protection": "Frost protection",
+          "off": "Off"
+        }
+      }
+    },
+    "sensor": {
+      "total_demand": { "name": "Total demand" },
+      "boiler_state": {
+        "name": "Boiler state",
+        "state": {
+          "starting": "Starting",
+          "off": "Off",
+          "heating": "Heating",
+          "frost_protection": "Frost protection",
+          "summer": "Summer",
+          "manual": "Manual",
+          "disabled": "Disabled",
+          "failsafe": "Failsafe"
+        }
+      },
+      "decision_reason": {
+        "name": "Decision reason",
+        "state": {
+          "startup": "Starting, waiting for data",
+          "automation_disabled": "Automation disabled",
+          "manual_override": "Switched manually",
+          "relay_unavailable": "Relay unavailable",
+          "no_data": "No valid room data",
+          "overtemperature": "Flow temperature too high",
+          "frost_protection": "Frost protection",
+          "mode_off": "Mode off",
+          "frost_only": "Frost protection only",
+          "summer_mode": "Heating limit exceeded",
+          "no_demand": "No heat demand",
+          "waiting_confirmation": "Confirming demand",
+          "waiting_min_pause": "Waiting for minimum pause",
+          "waiting_max_starts": "Maximum starts per hour reached",
+          "demand_start": "Started on heat demand",
+          "deficit_start": "Started on temperature deficit",
+          "demand_continues": "Heating, demand continues",
+          "min_runtime": "Minimum run time",
+          "demand_satisfied": "Demand satisfied"
+        }
+      },
+      "outdoor_temperature": { "name": "Outdoor temperature" },
+      "outdoor_temperature_smoothed": { "name": "Outdoor temperature smoothed" },
+      "boiler_starts_today": { "name": "Boiler starts today" },
+      "boiler_runtime_today": { "name": "Boiler runtime today" },
+      "burner_starts_today": { "name": "Burner starts today" },
+      "burner_runtime_today": { "name": "Burner runtime today" },
+      "temperature_spread": { "name": "Flow/return spread" },
+      "room_demand": { "name": "Demand" },
+      "room_temperature": { "name": "Temperature" },
+      "room_status": {
+        "name": "Status",
+        "state": {
+          "ok": "OK",
+          "degraded": "Partly missing data",
+          "stale": "No valid data",
+          "window_open": "Window open",
+          "monitor_only": "Monitor only"
+        }
+      }
+    },
+    "switch": {
+      "automation": { "name": "Automation" },
+      "observation_mode": { "name": "Observation mode" }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+[project]
+name = "heat-conductor"
+version = "0.1.0"
+description = "HeatConductor – intelligente Heizungssteuerung für Home Assistant"
+requires-python = ">=3.14"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["custom_components"]
+combine-as-imports = true
