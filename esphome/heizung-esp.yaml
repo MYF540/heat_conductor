@@ -82,24 +82,103 @@ vaillant_x6:
   uart_id: x6_uart
   update_interval: 15s
 
+# ---------------------------------------------------------------------------
+# Kalibrierung der Anlegefühler: korrigiert = roh × Faktor + Offset
+# Einstellbar in Home Assistant (Konfiguration des Geräts), gespeichert auf dem ESP.
+# Die Entitäten "Vorlauf"/"Rücklauf" liefern bereits die korrigierten Werte.
+# ---------------------------------------------------------------------------
+number:
+  - platform: template
+    name: "Vorlauf Kalibrierung Offset"
+    id: flow_cal_offset
+    entity_category: config
+    unit_of_measurement: "K"
+    min_value: -10
+    max_value: 10
+    step: 0.05
+    mode: box
+    initial_value: 0
+    restore_value: true
+    optimistic: true
+  - platform: template
+    name: "Vorlauf Kalibrierung Faktor"
+    id: flow_cal_factor
+    entity_category: config
+    min_value: 0.8
+    max_value: 1.2
+    step: 0.001
+    mode: box
+    initial_value: 1
+    restore_value: true
+    optimistic: true
+  - platform: template
+    name: "Rücklauf Kalibrierung Offset"
+    id: return_cal_offset
+    entity_category: config
+    unit_of_measurement: "K"
+    min_value: -10
+    max_value: 10
+    step: 0.05
+    mode: box
+    initial_value: 0
+    restore_value: true
+    optimistic: true
+  - platform: template
+    name: "Rücklauf Kalibrierung Faktor"
+    id: return_cal_factor
+    entity_category: config
+    min_value: 0.8
+    max_value: 1.2
+    step: 0.001
+    mode: box
+    initial_value: 1
+    restore_value: true
+    optimistic: true
+
 sensor:
-  # --- Anlegefühler (Hauptquelle für HeatConductor) ---
+  # --- Anlegefühler: Rohwerte (Diagnose, Grundlage der Kalibrierung) ---
   - platform: dallas_temp
     one_wire_id: pipe_bus
     address: ${address_flow}
-    name: "Vorlauf"
-    id: flow_temperature
+    name: "Vorlauf roh"
+    id: flow_raw
+    entity_category: diagnostic
+    accuracy_decimals: 2
     update_interval: 15s
     filters:
       - filter_out: 85.0 # Einschaltwert des DS18B20
   - platform: dallas_temp
     one_wire_id: pipe_bus
     address: ${address_return}
-    name: "Rücklauf"
-    id: return_temperature
+    name: "Rücklauf roh"
+    id: return_raw
+    entity_category: diagnostic
+    accuracy_decimals: 2
     update_interval: 15s
     filters:
       - filter_out: 85.0
+
+  # --- Anlegefühler kalibriert (Hauptquelle für HeatConductor) ---
+  - platform: copy
+    source_id: flow_raw
+    name: "Vorlauf"
+    id: flow_temperature
+    accuracy_decimals: 1
+    filters:
+      - lambda: |-
+          const float factor = id(flow_cal_factor).has_state() ? id(flow_cal_factor).state : 1.0f;
+          const float offset = id(flow_cal_offset).has_state() ? id(flow_cal_offset).state : 0.0f;
+          return x * factor + offset;
+  - platform: copy
+    source_id: return_raw
+    name: "Rücklauf"
+    id: return_temperature
+    accuracy_decimals: 1
+    filters:
+      - lambda: |-
+          const float factor = id(return_cal_factor).has_state() ? id(return_cal_factor).state : 1.0f;
+          const float offset = id(return_cal_offset).has_state() ? id(return_cal_offset).state : 0.0f;
+          return x * factor + offset;
 
   # --- Werte aus der Kesselelektronik (X6) ---
   - platform: vaillant_x6

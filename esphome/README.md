@@ -100,6 +100,58 @@ siehe `secrets.yaml.example`.
    gesendeten Pakete protokolliert.
 6. Nicht jede Adresse wird von jedem Kesselmodell beantwortet. Werte, die dauerhaft keine
    Antwort liefern, in der YAML auskommentieren.
+7. **Fühler kalibrieren** (siehe unten).
+
+## Kalibrierung der Vor- und Rücklauffühler
+
+Die Korrektur passiert **auf dem ESP**: Die Entitäten *Vorlauf* und *Rücklauf* liefern
+bereits korrigierte Werte an Home Assistant, HeatConductor und alle anderen Nutzer.
+
+```
+korrigiert = roh × Faktor + Offset
+```
+
+| Entität | Bedeutung |
+|---|---|
+| *Vorlauf roh*, *Rücklauf roh* (Diagnose) | unkorrigierter Messwert des DS18B20 |
+| *Vorlauf/Rücklauf Kalibrierung Offset* (Konfiguration) | Verschiebung in K, Standard 0 |
+| *Vorlauf/Rücklauf Kalibrierung Faktor* (Konfiguration) | Steigung, Standard 1 |
+
+Die Werte stellst du in Home Assistant am Gerät *Heizung* unter *Konfiguration* ein. Sie
+werden auf dem ESP gespeichert, überstehen Neustarts und wirken ab der nächsten Messung
+(höchstens 15 s), ohne neu zu flashen.
+
+### Zwei-Punkt-Kalibrierung (am genauesten, vor der Montage)
+
+1. Beide Fühler und ein **Referenzthermometer** zusammen in ein isoliertes Gefäß mit Wasser.
+2. **Punkt 1** bei etwa 25 °C, **Punkt 2** bei etwa 60 °C: jeweils einige Minuten warten, dann
+   Referenz `R` und Rohwert `M` („… roh“) je Fühler notieren.
+3. Je Fühler berechnen und eintragen:
+
+   ```
+   Faktor = (R2 − R1) / (M2 − M1)
+   Offset = R1 − M1 × Faktor
+   ```
+
+   Beispiel: M1 = 24,6, R1 = 25,0, M2 = 59,1, R2 = 60,0
+   → Faktor = 35,0 / 34,5 = **1,0145** · Offset = 25,0 − 24,6 × 1,0145 = **0,04 K**
+
+   Das Eingabefeld für den Faktor erlaubt drei Nachkommastellen: 1,014 ergibt dann einen
+   Offset von 0,06 K (Offset immer mit dem tatsächlich eingetragenen Faktor berechnen).
+
+### Ein-Punkt-Kalibrierung (Offset, auch nach der Montage)
+
+Faktor auf 1 lassen. Bei gleicher Temperatur Referenz und Rohwert vergleichen:
+`Offset = Referenz − roh`.
+
+Nach der Montage eignet sich dafür eine längere Brennerpause mit laufender Pumpe: Vor- und
+Rücklauf sind dann annähernd gleich warm. Den Rücklauf-Offset so wählen, dass beide Fühler
+denselben Wert zeigen. Die X6-Werte *Kessel Vorlauf/Rücklauf* taugen zur Plausibilisierung,
+sind aber selbst nur auf etwa ±1 K genau.
+
+Hinweis: Anlegefühler messen am Rohr etwas weniger als die Wassertemperatur. Die
+Zwei-Punkt-Kalibrierung im Wasserbad korrigiert den Fühler selbst; eine zusätzliche
+Montage-Abweichung lässt sich danach über den Offset ausgleichen.
 
 ## Einbindung in HeatConductor
 
@@ -107,8 +159,8 @@ siehe `secrets.yaml.example`.
 
 | Feld | Entität |
 |---|---|
-| Vorlauftemperatur | `sensor.heizung_vorlauf` (DS18B20) |
-| Rücklauftemperatur | `sensor.heizung_rucklauf` (DS18B20) |
+| Vorlauftemperatur | `sensor.heizung_vorlauf` (DS18B20, kalibriert) |
+| Rücklauftemperatur | `sensor.heizung_rucklauf` (DS18B20, kalibriert) |
 | Sensor „Brenner aktiv“ | `binary_sensor.heizung_brenner` (X6) |
 
 Die X6-Temperaturen des Kessels dienen zur Kontrolle und später zur Plausibilisierung.
