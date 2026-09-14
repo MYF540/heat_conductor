@@ -26,9 +26,6 @@ jobs:
       - uses: home-assistant/actions/hassfest@master
 
   hacs:
-    # Manual for now: the checks for the HACS default store (license, topics,
-    # brand icon) are not met yet. Installing as a custom repository works anyway.
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: hacs/action@main
