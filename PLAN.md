@@ -325,6 +325,7 @@ hacs.json  README.md  PLAN.md  LICENSE
 | **5 Lernen + Vorausschau** | Thermisches Modell, Optimum Start, Restwärme, Wetter, PV-Proxy | Messbar weniger Starts / Gas bei gleichem Komfort |
 | **6 Veröffentlichung** | Doku, Beispiele, HACS-Validierung, Repo öffentlich | HACS-Installation auf frischer Instanz funktioniert |
 | *Option* | Vorlauftemperatur-Vorgabe über 7-8-9 (Einbauregler entfällt) | – |
+| *Geplant* | **HeatConductor-Panel** in der HA-Seitenleiste, Teile A–D (Abschnitt 12) – noch nicht terminiert | siehe Abschnitt 12.8 |
 
 ---
 
@@ -339,6 +340,9 @@ hacs.json  README.md  PLAN.md  LICENSE
 | Einbauregler und HeatConductor arbeiten gegeneinander | Einbauregler nur für Heizkurve, Zeitprogramm auf Dauerbetrieb |
 | Fehlfunktion im Winter | Beobachtungsmodus zuerst, Handschalter, Benachrichtigungen |
 | 230-V-Arbeiten | Ausschließlich durch Elektrofachkraft |
+| Panel bricht nach HA-Frontend-Updates | Nur öffentliche Schnittstellen nutzen (WebSocket-API, `hass`-Objekt), eigene Diagramm-Bibliothek, keine internen HA-Komponenten |
+| Gelernte Werte verfälscht, solange HmIP/Einbauregler steuern | Lernen erst mit aktiver Steuerung scharf nutzen; Stichprobenzahl und Streuung immer anzeigen |
+| Parameter per Panel auf unsichere Werte gestellt | Serverseitige Bereichsprüfung, Sicherheitsregeln nicht abschaltbar, Änderungsprotokoll, „Auf Standard zurücksetzen“ |
 
 ---
 
@@ -365,6 +369,11 @@ hacs.json  README.md  PLAN.md  LICENSE
 | 2026-09-14 | Gaswerte (Brennwert, Zustandszahl) konfigurierbar |
 | 2026-09-14 | Plan freigegeben, Umsetzung Phase 1 gestartet |
 | 2026-09-14 | Tests der HA-Schicht laufen in Docker (HA läuft nicht nativ unter Windows) |
+| 2026-09-14 | Panel in der Seitenleiste geplant (Teile A–D), vorerst nur Planung, keine Umsetzung |
+| 2026-09-14 | Panel: alle Nutzer sehen, nur Admins ändern Parameter |
+| 2026-09-14 | Panel: Was-wäre-wenn-Simulation (Teil D) wird mit eingeplant |
+| 2026-09-14 | Lernen (Teil C) wird noch nicht gestartet, nur festgehalten |
+| 2026-09-14 | Panel zweisprachig Deutsch/Englisch |
 
 ---
 
@@ -372,3 +381,119 @@ hacs.json  README.md  PLAN.md  LICENSE
 
 Installationsspezifische offene Punkte (Zuordnung von Sensoren zu Räumen, Entity-IDs,
 Impulswertigkeit des Gaszählers) werden in `PLAN.local.md` gepflegt.
+
+---
+
+## 12. Erweiterung: HeatConductor-Panel (geplant, noch nicht umgesetzt)
+
+> Status: **nur Planung**. Umsetzung erst nach gesonderter Freigabe.
+
+### 12.1 Ziel
+
+Ein eigener Menüpunkt **„HeatConductor“** in der linken HA-Seitenleiste (neben Dashboards und Apps), der
+
+- die **Regelparameter verständlich erklärt und einstellbar** macht,
+- **live zeigt, warum** der Kessel an oder aus ist,
+- **visualisiert, was der Algorithmus lernt**,
+- per **Was-wäre-wenn** die Wirkung geänderter Parameter vorab zeigt.
+
+### 12.2 Rahmen und Entscheidungen
+
+| Punkt | Festlegung |
+|---|---|
+| Einbindung | Registrierung durch die Integration selbst als Custom Panel (Seitenleiste), keine separate Installation; funktioniert über HACS |
+| Rechte | **Alle Nutzer sehen** das Panel, **nur Admins ändern** Parameter und setzen Lerndaten zurück (serverseitig geprüft) |
+| Sprache | Deutsch + Englisch (folgt der HA-Spracheinstellung) |
+| Frontend | Web-Component mit Lit + TypeScript, eigene gebündelte Diagramm-Bibliothek; gebaute JS-Datei liegt im Repo, Build in Docker |
+| Datenzugriff | WebSocket-API der Integration; Verläufe direkt aus dem HA-Recorder |
+| Parameter | Änderungen wirken **sofort ohne Neuladen** der Integration; bisheriger Options-Dialog bleibt als Rückfallweg |
+
+### 12.3 Teil A – Parameter transparent und einstellbar
+
+**Aufbau:** Gruppen mit Karten je Parameter. Jede Karte zeigt Erklärung, Einheit, erlaubten Bereich, Standard- und aktuellen Wert, Wirkungshinweis und – wo sinnvoll – eine kleine Skizze.
+
+| Gruppe | Parameter | Erklärung | Wirkung „höher“ |
+|---|---|---|---|
+| Start/Stopp | Start-Schwelle (%) | Gewichteter Bedarf aller Räume, ab dem der Kessel starten darf | Weniger, dafür längere Brennerläufe; Räume kühlen etwas stärker aus |
+| Start/Stopp | Bestätigungszeit (min) | So lange muss der Bedarf über der Start-Schwelle liegen | Kurze Bedarfsspitzen (z. B. Lüften) lösen keinen Start aus; Reaktion träger |
+| Start/Stopp | Stopp-Schwelle (%) | Unter diesem Bedarf darf der Kessel ausgehen | Kessel geht früher aus, Restwärme wird stärker genutzt |
+| Start/Stopp | Sofortstart ab Raumdefizit (K) | Liegt ein Raum so weit unter Soll, startet der Kessel ohne Bestätigung | Seltener Sofortstarts, einzelne kalte Räume warten länger |
+| Start/Stopp | Defizit für 100 % Raumbedarf (K) | Umrechnung Temperaturdefizit → Raumbedarf | Defizite wirken schwächer, Ventilöffnung dominiert |
+| Takt-Schutz | Mindestlaufzeit (min) | Kürzeste Brennerlaufzeit nach einem Start | Weniger Takten, mögliche Überschwinger der Raumtemperatur |
+| Takt-Schutz | Mindestpause (min) | Kürzeste Pause zwischen zwei Starts | Weniger Starts, längere Wartezeit bei neuem Bedarf |
+| Takt-Schutz | Max. Starts pro Stunde | Harte Obergrenze für Starts | Mehr Flexibilität, mehr Verschleiß |
+| Heizgrenze & Frost | Heizgrenze (°C) | Über dieser geglätteten Außentemperatur bleibt der Kessel aus (außer Komfort/Frost) | Heizt auch an milderen Tagen |
+| Heizgrenze & Frost | Glättung Außentemperatur (h) | Zeitkonstante der Glättung für die Heizgrenze | Kurze Warm-/Kaltphasen ändern den Modus weniger |
+| Heizgrenze & Frost | Frostschutz-Raumtemperatur (°C) | Unterschreitet ein Raum diesen Wert, heizt der Kessel immer | Frostschutz greift früher |
+| Sicherheit | Max. Vorlauftemperatur (°C) | Darüber sofortige Abschaltung | Abschaltung erst bei höherer Temperatur |
+| Sicherheit | Werte veraltet nach (min) | Ältere Messwerte werden ignoriert | Toleranter bei selten sendenden Sensoren, erkennt Ausfälle später |
+| Sicherheit | Pause nach manuellem Schalten (min) | So lange respektiert die Automatik ein manuelles Schalten | Längere Übersteuerung durch den Nutzer |
+| Sensorik | Brenner-an-Schwelle Gasdurchfluss (m³/h) | Ab diesem Durchfluss gilt der Brenner als an | Kurzes Zünden/Nachlaufen wird nicht als Start gezählt |
+
+**Skizzen:** Bedarfsverlauf mit Start-/Stopp-Schwelle und Bestätigungszeit; Zeitstrahl mit Mindestlaufzeit/-pause; Heizgrenze auf Außentemperaturkurve.
+
+**Funktionen:** Bereichsprüfung (Client und Server), Speichern nur für Admins, „Auf Standard zurücksetzen“ (je Parameter/alle), **Änderungsprotokoll** (Zeit, Nutzer, Parameter, alt → neu, persistent).
+
+### 12.4 Teil B – Live-Ansicht und Verlauf
+
+- **Zustandsautomat als Grafik**: Zustände Aus/Heizt/Frostschutz/Sommer/Manuell/Sicherheitsabschaltung, aktueller Zustand hervorgehoben, Entscheidungsgrund im Klartext.
+- **Restzeiten als Fortschrittsbalken**: Bestätigung, Mindestlaufzeit, Mindestpause, Starts in der letzten Stunde.
+- **Gesamtbedarf** als Anzeige mit Start-/Stopp-Schwelle.
+- **Raumtabelle**: Bedarf, Anteil Ventil vs. Defizit, Soll/Ist, Gewichtung, Datenstatus.
+- **Zeitverlauf (24 h / 7 Tage)**: Gesamtbedarf mit Schwellen, virtuelle Anforderung vs. realer Brennerbetrieb, Außentemperatur (roh/geglättet), Vor-/Rücklauf, Markierung von Parameteränderungen.
+
+### 12.5 Teil C – Lernen und Visualisierung
+
+**Status: nur festgehalten, Lernen wird noch nicht gestartet.**
+
+| Gelernt | Datengrundlage | Verfahren (Entwurf) | Visualisierung | Späterer Nutzen |
+|---|---|---|---|---|
+| Aufheizrate je Raum (K/h) | Raumtemperatur bei Brenner an + Ventil offen | Steigung je Heizphase, gruppiert nach Außentemperatur | Wert + Streudiagramm gegen Außentemperatur | Rechtzeitiger Start (Optimum Start) |
+| Auskühl-Zeitkonstante je Raum (h) | Temperaturabfall ohne Heizen | Exponentieller Fit auf (T_innen − T_außen) | Abkühlkurve mit Fit | Absenkung/Restwärme, Vorausschau |
+| Totzeit je Raum (min) | Ventil auf → erster messbarer Anstieg | Median über Ereignisse | Wert + Verteilung | Vermeidung von Überschwingern |
+| Brennerzyklen | Brenner an/aus (X6/Gas), Außentemperatur | Laufzeit-/Pausen-Statistik je Temperaturband | Histogramm, Takt-Kennzahlen | Kalibrierung Takt-Schutz |
+| Heizkurve des Einbaureglers | Vorlauf-Soll (X6) vs. Außentemperatur | Lineare Regression | Kurve + Messpunkte | Kontrolle / spätere eigene Vorlaufvorgabe |
+
+- Jeder gelernte Wert mit **Stichprobenzahl, Streuung und Stand** (Datum der letzten Aktualisierung).
+- **Lernverlauf**: Stabilisierung der Werte über die Zeit.
+- **Zurücksetzen** je Raum oder komplett (nur Admins).
+- Speicherung persistent im HA-Storage; Plausibilitätsgrenzen gegen Ausreißer (offene Fenster, Sensorsprünge).
+
+### 12.6 Teil D – Was-wäre-wenn
+
+- Admin/Nutzer ändert Parameter im Panel **als Entwurf** → Server spielt die **aufgezeichneten Eingangsdaten der letzten 24 h** (optional 7 Tage) mit den Entwurfswerten durch den unveränderten Regelkern.
+- Ergebnis im Vergleich **aktuell vs. Entwurf**: Starts, Brennerlaufzeit, Anteil Zeit mit Raum-Defizit > 0,5 K, Verlaufsdiagramm beider Varianten.
+- Eingangsdaten aus dem Recorder; der Regelkern ist bereits HA-unabhängig und damit direkt wiederverwendbar.
+- Grenzen klar anzeigen: Simulation ohne Rückwirkung auf die Raumtemperaturen (echte Temperaturen bleiben die aufgezeichneten); belastbar vor allem für Starts/Laufzeiten.
+
+### 12.7 Technischer Entwurf
+
+**Backend (Integration):**
+
+| Baustein | Aufgabe |
+|---|---|
+| `panel.py` | Registriert statischen Pfad für die JS-Datei und das Custom Panel (Titel, Icon `mdi:radiator`, URL `heat-conductor`) |
+| `websocket_api.py` | Befehle `heat_conductor/state`, `…/params/get` (inkl. Metadaten), `…/params/set` (Admin), `…/params/reset` (Admin), `…/changelog`, `…/learning/get`, `…/learning/reset` (Admin), `…/simulate` |
+| `core/params_meta.py` | Eine Quelle für Bereich, Einheit, Standardwert, Gruppe und Übersetzungsschlüssel aller Parameter (auch für Options-Dialog) |
+| Coordinator | Parameter live übernehmen (ohne Reload), Änderungsprotokoll speichern |
+| `core/learning/…` | Lernverfahren aus 12.5 (später) |
+| `core/simulation.py` | Wiedergabe von Eingangsdaten durch die Engine (Teil D) |
+
+**Frontend (`frontend/`):** Lit + TypeScript, Build per Docker (Node-Image), Ausgabe `custom_components/heat_conductor/frontend/heat-conductor-panel.js`. Ansichten als Reiter: *Übersicht* · *Parameter* · *Lernen* · *Was-wäre-wenn* · *Protokoll*. Theme-Farben aus HA übernehmen (hell/dunkel).
+
+**Tests:** WebSocket-Befehle inkl. Rechteprüfung (pytest), Parameter-Validierung, Simulation gegen bekannte Szenarien, Frontend-Build in CI.
+
+### 12.8 Reihenfolge und Abnahme
+
+| Schritt | Inhalt | Abnahmekriterium |
+|---|---|---|
+| A | Panel-Grundgerüst, Parameter-Editor, Rechte, Änderungsprotokoll, Live-Übernahme | Nutzer sehen, nur Admins ändern; Änderungen wirken ohne Neuladen; Protokoll vollständig |
+| B | Live-Ansicht, Zustandsgrafik, Raumtabelle, Verlaufsdiagramme | Jede Kesselentscheidung im Panel nachvollziehbar |
+| D | Was-wäre-wenn auf Recorder-Daten | Simulation mit aktuellen Parametern reproduziert die realen Entscheidungen der letzten 24 h |
+| C | Lernverfahren + Visualisierung (sinnvoll zusammen mit Phase 5) | Werte stabilisieren sich, Streuung plausibel, Zurücksetzen funktioniert |
+
+### 12.9 Offene Punkte zum Panel
+
+1. Umfang Was-wäre-wenn: nur 24 h oder wählbar bis 7 Tage (Rechenzeit auf dem Thin Client prüfen).
+2. Sollen Nicht-Admins Entwürfe simulieren dürfen (ohne Speichern)?
+3. Aufbewahrungsdauer des Änderungsprotokolls.

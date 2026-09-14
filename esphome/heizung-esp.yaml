@@ -1,0 +1,157 @@
+# HeatConductor – Kessel-ESP
+#
+# ESP32-S3-DevKitC-1 am Heizkessel:
+#   - Vorlauf- und Rücklauftemperatur mit 2× DS18B20 (Anlegefühler, 1-Wire)
+#   - Vaillant X6-Diagnoseschnittstelle, NUR LESEND, galvanisch getrennt
+#
+# Verdrahtung: siehe README.md und docs/verdrahtung.svg in diesem Ordner.
+#
+# Erstinbetriebnahme der DS18B20:
+#   1. Mit den Platzhalter-Adressen flashen
+#   2. Im Log listet der 1-Wire-Bus die gefundenen Adressen (0x....)
+#   3. Einen Fühler in der Hand erwärmen, um Vorlauf/Rücklauf zuzuordnen
+#   4. Adressen unter "substitutions" eintragen und erneut flashen
+
+substitutions:
+  name: heizung-esp
+  friendly_name: Heizung
+  # DS18B20-Adressen nach der Erstinbetriebnahme eintragen
+  address_flow: "0x0000000000000000"
+  address_return: "0x0000000000000000"
+  # 9600 ist bei den meisten Vaillant-Geräten korrekt, ältere nutzen teils 2400
+  x6_baud_rate: "9600"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  min_version: 2025.2.0
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  framework:
+    type: esp-idf
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [vaillant_x6]
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Heizung-ESP Fallback"
+    password: !secret fallback_password
+
+captive_portal:
+
+# ---------------------------------------------------------------------------
+# 1-Wire-Bus für die Anlegefühler (GPIO4, 4,7 kΩ Pull-up nach 3,3 V)
+# ---------------------------------------------------------------------------
+one_wire:
+  - platform: gpio
+    pin: GPIO4
+    id: pipe_bus
+
+# ---------------------------------------------------------------------------
+# X6-Schnittstelle über Digitalisolator (UART1: TX GPIO17, RX GPIO18)
+# ---------------------------------------------------------------------------
+uart:
+  id: x6_uart
+  tx_pin: GPIO17
+  rx_pin: GPIO18
+  baud_rate: ${x6_baud_rate}
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+
+vaillant_x6:
+  id: kessel_x6
+  uart_id: x6_uart
+  update_interval: 15s
+
+sensor:
+  # --- Anlegefühler (Hauptquelle für HeatConductor) ---
+  - platform: dallas_temp
+    one_wire_id: pipe_bus
+    address: ${address_flow}
+    name: "Vorlauf"
+    id: flow_temperature
+    update_interval: 15s
+    filters:
+      - filter_out: 85.0 # Einschaltwert des DS18B20
+  - platform: dallas_temp
+    one_wire_id: pipe_bus
+    address: ${address_return}
+    name: "Rücklauf"
+    id: return_temperature
+    update_interval: 15s
+    filters:
+      - filter_out: 85.0
+
+  # --- Werte aus der Kesselelektronik (X6) ---
+  - platform: vaillant_x6
+    vaillant_x6_id: kessel_x6
+    flow_temperature:
+      name: "Kessel Vorlauf"
+    flow_temperature_target:
+      name: "Kessel Vorlauf Soll"
+    flow_temperature_controller:
+      name: "Regler Vorlauf Soll"
+    return_temperature:
+      name: "Kessel Rücklauf"
+    remaining_burner_lock:
+      name: "Brennsperrzeit"
+    errors:
+      name: "X6 Übertragungsfehler"
+
+  # --- Diagnose ---
+  - platform: template
+    name: "Spreizung"
+    unit_of_measurement: "K"
+    accuracy_decimals: 1
+    state_class: measurement
+    update_interval: 15s
+    lambda: |-
+      if (id(flow_temperature).has_state() && id(return_temperature).has_state()) {
+        return id(flow_temperature).state - id(return_temperature).state;
+      }
+      return {};
+  - platform: wifi_signal
+    name: "WLAN-Signal"
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    name: "Laufzeit"
+    entity_category: diagnostic
+
+binary_sensor:
+  - platform: vaillant_x6
+    vaillant_x6_id: kessel_x6
+    burner:
+      name: "Brenner"
+    pump:
+      name: "Pumpe"
+    winter_mode:
+      name: "Winterbetrieb"
+    connected:
+      name: "X6 Verbindung"
+  - platform: status
+    name: "Status"
+
+button:
+  - platform: restart
+    name: "Neustart"
+    entity_category: config

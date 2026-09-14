@@ -13,3 +13,7 @@ htmlcov/
 # Private, installation-specific notes (never upload)
 *.local.md
 *.local.*
+
+# ESPHome
+esphome/secrets.yaml
+esphome/.esphome/
