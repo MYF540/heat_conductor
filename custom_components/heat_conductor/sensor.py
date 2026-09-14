@@ -12,7 +12,14 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfTemperature, UnitOfTime
+from homeassistant.const import (
+    PERCENTAGE,
+    UnitOfEnergy,
+    UnitOfPower,
+    UnitOfTemperature,
+    UnitOfTime,
+    UnitOfVolume,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -119,7 +126,7 @@ CENTRAL_SENSORS: tuple[HeatConductorSensorDescription, ...] = (
         key="burner_starts_today",
         state_class=SensorStateClass.TOTAL_INCREASING,
         value_fn=lambda r: r.burner_stats.starts if r.burner_stats else None,
-        exists_fn=lambda c: c.gas_flow is not None or c.burner_sensor is not None,
+        exists_fn=lambda c: c.has_gas_source or c.burner_sensor is not None,
     ),
     HeatConductorSensorDescription(
         key="burner_runtime_today",
@@ -128,7 +135,7 @@ CENTRAL_SENSORS: tuple[HeatConductorSensorDescription, ...] = (
         state_class=SensorStateClass.TOTAL_INCREASING,
         suggested_display_precision=0,
         value_fn=lambda r: _minutes(r, burner=True),
-        exists_fn=lambda c: c.gas_flow is not None or c.burner_sensor is not None,
+        exists_fn=lambda c: c.has_gas_source or c.burner_sensor is not None,
     ),
     HeatConductorSensorDescription(
         key="temperature_spread",
@@ -141,6 +148,92 @@ CENTRAL_SENSORS: tuple[HeatConductorSensorDescription, ...] = (
             "return_temperature": _round(r.return_temperature),
         },
         exists_fn=lambda c: c.flow_temperature is not None and c.return_temperature is not None,
+    ),
+    # --- Phase 2: energy and analysis ---
+    HeatConductorSensorDescription(
+        key="gas_volume",
+        device_class=SensorDeviceClass.GAS,
+        native_unit_of_measurement=UnitOfVolume.CUBIC_METERS,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=3,
+        value_fn=lambda r: _round(r.energy.gas_volume, 4),
+        exists_fn=lambda c: c.has_gas_source,
+    ),
+    HeatConductorSensorDescription(
+        key="gas_energy",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=2,
+        value_fn=lambda r: _round(r.energy.gas_energy, 3),
+        attributes_fn=lambda r: {"kwh_per_m3": round(r.energy.kwh_per_m3, 4)},
+        exists_fn=lambda c: c.has_gas_source,
+    ),
+    HeatConductorSensorDescription(
+        key="gas_energy_today",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=2,
+        value_fn=lambda r: _round(r.energy.gas_energy_today, 3),
+        exists_fn=lambda c: c.has_gas_source,
+    ),
+    HeatConductorSensorDescription(
+        key="gas_energy_yesterday",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=2,
+        value_fn=lambda r: _round(r.energy.gas_energy_yesterday, 3),
+        exists_fn=lambda c: c.has_gas_source,
+    ),
+    HeatConductorSensorDescription(
+        key="burner_power",
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        value_fn=lambda r: _round(r.energy.burner_power, 2),
+        attributes_fn=lambda r: {"gas_flow_m3h": _round(r.energy.gas_flow, 3)},
+        exists_fn=lambda c: c.has_gas_source,
+    ),
+    HeatConductorSensorDescription(
+        key="burner_modulation",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=lambda r: _round(r.energy.burner_modulation),
+        exists_fn=lambda c: c.has_gas_source and c.energy_params.burner_max_power > 0,
+    ),
+    HeatConductorSensorDescription(
+        key="condensing_share_today",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=lambda r: _round(r.energy.condensing_share_today),
+        exists_fn=lambda c: (
+            c.return_temperature is not None and (c.has_gas_source or c.burner_sensor is not None)
+        ),
+    ),
+    HeatConductorSensorDescription(
+        key="outdoor_mean_today",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        value_fn=lambda r: _round(r.energy.outdoor_mean_today),
+    ),
+    HeatConductorSensorDescription(
+        key="degree_days_yesterday",
+        native_unit_of_measurement="Kd",
+        suggested_display_precision=1,
+        value_fn=lambda r: _round(r.energy.degree_days_yesterday),
+    ),
+    HeatConductorSensorDescription(
+        key="energy_per_degree_day_yesterday",
+        native_unit_of_measurement="kWh/Kd",
+        suggested_display_precision=2,
+        value_fn=lambda r: _round(r.energy.energy_per_degree_day_yesterday, 3),
+        exists_fn=lambda c: c.has_gas_source,
     ),
 )
 

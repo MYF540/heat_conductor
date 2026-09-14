@@ -21,12 +21,16 @@ import voluptuous as vol
 from .const import (
     CONF_BOILER_SWITCH,
     CONF_BURNER_FLOW_THRESHOLD,
+    CONF_BURNER_MAX_POWER,
     CONF_BURNER_SENSOR,
+    CONF_CALORIFIC_VALUE,
     CONF_CLIMATES,
+    CONF_CONDENSING_RETURN_LIMIT,
     CONF_DEFICIT_FULL_SCALE,
     CONF_FLOW_TEMPERATURE,
     CONF_FROST_LIMIT,
     CONF_GAS_FLOW,
+    CONF_GAS_METER,
     CONF_HEATING_LIMIT,
     CONF_IMMEDIATE_DEFICIT,
     CONF_MANUAL_OVERRIDE,
@@ -47,7 +51,9 @@ from .const import (
     CONF_WEATHER,
     CONF_WEIGHT,
     CONF_WINDOWS,
+    CONF_Z_FACTOR,
     DOMAIN,
+    ENERGY_DEFAULTS,
     PARAMETER_DEFAULTS,
     SUBENTRY_ROOM,
 )
@@ -58,6 +64,7 @@ ENTITY_KEYS = (
     CONF_FLOW_TEMPERATURE,
     CONF_RETURN_TEMPERATURE,
     CONF_GAS_FLOW,
+    CONF_GAS_METER,
     CONF_BURNER_SENSOR,
     CONF_OUTDOOR_SENSORS,
     CONF_WEATHER,
@@ -74,7 +81,7 @@ def _entity(
 
 
 def _number(
-    minimum: float, maximum: float, step: float, unit: str | None = None
+    minimum: float, maximum: float, step: float | str, unit: str | None = None
 ) -> selector.NumberSelector:
     config = selector.NumberSelectorConfig(
         min=minimum, max=maximum, step=step, mode=selector.NumberSelectorMode.BOX
@@ -93,6 +100,7 @@ ENTITIES_SCHEMA = vol.Schema(
         vol.Optional(CONF_WEATHER): _entity("weather"),
         vol.Optional(CONF_FLOW_TEMPERATURE): _entity("sensor", SensorDeviceClass.TEMPERATURE),
         vol.Optional(CONF_RETURN_TEMPERATURE): _entity("sensor", SensorDeviceClass.TEMPERATURE),
+        vol.Optional(CONF_GAS_METER): _entity("sensor"),
         vol.Optional(CONF_GAS_FLOW): _entity("sensor"),
         vol.Optional(CONF_BURNER_SENSOR): _entity("binary_sensor"),
     }
@@ -115,6 +123,16 @@ PARAMETERS_SCHEMA = vol.Schema(
         vol.Required(CONF_MANUAL_OVERRIDE): _number(5, 1440, 5, "min"),
         vol.Required(CONF_OUTDOOR_SMOOTHING): _number(1, 72, 1, "h"),
         vol.Required(CONF_BURNER_FLOW_THRESHOLD): _number(0, 5, 0.05, "m³/h"),
+    }
+)
+
+
+ENERGY_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_CALORIFIC_VALUE): _number(8, 13, 0.001, "kWh/m³"),
+        vol.Required(CONF_Z_FACTOR): _number(0.8, 1.1, "any"),
+        vol.Required(CONF_BURNER_MAX_POWER): _number(0, 200, 0.1, "kW"),
+        vol.Required(CONF_CONDENSING_RETURN_LIMIT): _number(30, 70, 1, "°C"),
     }
 )
 
@@ -151,7 +169,7 @@ class HeatConductorConfigFlow(ConfigFlow, domain=DOMAIN):
             errors = _validate_entities(user_input)
             if not errors:
                 name = user_input.pop(CONF_NAME)
-                options = _merge_entities(dict(PARAMETER_DEFAULTS), user_input)
+                options = _merge_entities({**PARAMETER_DEFAULTS, **ENERGY_DEFAULTS}, user_input)
                 return self.async_create_entry(title=name, data={}, options=options)
 
         return self.async_show_form(
@@ -180,7 +198,9 @@ class HeatConductorOptionsFlow(OptionsFlow):
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Choose what to edit."""
-        return self.async_show_menu(step_id="init", menu_options=["entities", "parameters"])
+        return self.async_show_menu(
+            step_id="init", menu_options=["entities", "parameters", "energy"]
+        )
 
     async def async_step_entities(
         self, user_input: dict[str, Any] | None = None
@@ -211,6 +231,16 @@ class HeatConductorOptionsFlow(OptionsFlow):
         return self.async_show_form(
             step_id="parameters",
             data_schema=self.add_suggested_values_to_schema(PARAMETERS_SCHEMA, current),
+        )
+
+    async def async_step_energy(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Edit gas and boiler constants."""
+        if user_input is not None:
+            return self.async_create_entry(data={**self.config_entry.options, **user_input})
+        current = {**ENERGY_DEFAULTS, **self.config_entry.options}
+        return self.async_show_form(
+            step_id="energy",
+            data_schema=self.add_suggested_values_to_schema(ENERGY_SCHEMA, current),
         )
 
 

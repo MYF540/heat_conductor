@@ -8,6 +8,7 @@ from typing import Any
 
 from .boiler_fsm import BoilerController, BoilerDecision, BoilerInputs
 from .demand import DemandSummary, RoomDemand, RoomInput, evaluate_room, summarize
+from .energy import EnergyParams, EnergySnapshot, EnergyTracker
 from .models import ControlParams, OperatingMode, Reading
 from .outdoor import ExponentialSmoother, OutdoorResult, fuse_outdoor
 from .stats import DailyRuntime, RuntimeSnapshot
@@ -24,6 +25,7 @@ class EngineSnapshot:
     flow_temperature: Reading | None
     return_temperature: Reading | None
     gas_flow: Reading | None
+    gas_meter: Reading | None
     burner_on: bool | None
     relay_on: bool | None
     mode: OperatingMode
@@ -46,6 +48,7 @@ class EngineResult:
     burner_active: bool | None
     boiler_stats: RuntimeSnapshot
     burner_stats: RuntimeSnapshot | None
+    energy: EnergySnapshot
 
     def room(self, room_id: str) -> RoomDemand | None:
         """Return the evaluated room with the given id."""
@@ -55,8 +58,9 @@ class EngineResult:
 class HeatingEngine:
     """Stateful evaluation pipeline."""
 
-    def __init__(self, params: ControlParams) -> None:
+    def __init__(self, params: ControlParams, energy_params: EnergyParams | None = None) -> None:
         self.params = params
+        self.energy = EnergyTracker(energy_params or EnergyParams())
         self.boiler = BoilerController(params)
         self.outdoor_smoother = ExponentialSmoother(params.outdoor_smoothing)
         self.boiler_stats = DailyRuntime()
@@ -97,11 +101,18 @@ class HeatingEngine:
             )
         )
 
-        burner = snap.burner_on
-        if burner is None and snap.gas_flow is not None:
-            gas = snap.gas_flow.valid_value(now, p.stale_after)
-            burner = gas >= p.burner_flow_threshold if gas is not None else None
-        has_burner_source = snap.burner_on is not None or snap.gas_flow is not None
+        energy = self.energy.update(
+            now,
+            meter=snap.gas_meter,
+            flow=snap.gas_flow,
+            burner_on=snap.burner_on,
+            burner_flow_threshold=p.burner_flow_threshold,
+            return_temperature=ret,
+            outdoor=outdoor.value,
+            max_age=p.stale_after,
+        )
+        burner = energy.burner_active
+        has_burner_source = snap.burner_on is not None or energy.has_gas_source
 
         return EngineResult(
             rooms=rooms,
@@ -115,6 +126,7 @@ class HeatingEngine:
             burner_active=burner,
             boiler_stats=self.boiler_stats.update(now, decision.request_heat),
             burner_stats=self.burner_stats.update(now, burner) if has_burner_source else None,
+            energy=energy,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -129,6 +141,7 @@ class HeatingEngine:
             ),
             "boiler_stats": self.boiler_stats.to_dict(),
             "burner_stats": self.burner_stats.to_dict(),
+            "energy": self.energy.to_dict(),
         }
 
     def restore(self, data: dict[str, Any]) -> None:
@@ -144,3 +157,4 @@ class HeatingEngine:
                 pass
         self.boiler_stats.restore(data.get("boiler_stats", {}))
         self.burner_stats.restore(data.get("burner_stats", {}))
+        self.energy.restore(data.get("energy", {}))

@@ -12,13 +12,15 @@
           "flow_temperature": "Vorlauftemperatur",
           "return_temperature": "Rücklauftemperatur",
           "gas_flow": "Gasdurchfluss (m³/h)",
-          "burner_sensor": "Sensor „Brenner aktiv“"
+          "burner_sensor": "Sensor „Brenner aktiv“",
+          "gas_meter": "Gaszählerstand (m³)"
         },
         "data_description": {
           "boiler_switch": "Schalter, der den Kessel freigibt (z. B. Shelly an Klemme 3-4). Im Beobachtungsmodus optional.",
           "outdoor_sensors": "Mehrere Sensoren werden kombiniert; ein von der Sonne beschienener Ausreißer wird ignoriert.",
-          "gas_flow": "Damit wird erkannt, ob der Brenner tatsächlich brennt.",
-          "burner_sensor": "Optional, z. B. aus der Kesseldiagnose. Hat Vorrang vor dem Gasdurchfluss."
+          "gas_flow": "Dient zur Erkennung, ob der Brenner brennt, und für die Brennerleistung. Ohne Zählerstand wird daraus der Verbrauch aufsummiert.",
+          "burner_sensor": "Optional, z. B. aus der Kesseldiagnose. Hat Vorrang vor dem Gasdurchfluss.",
+          "gas_meter": "Fortlaufender Zählerstand, z. B. der Gesamtwert eines ESPHome-Impulszählers. Genauer als das Aufsummieren des Durchflusses."
         }
       }
     },
@@ -35,7 +37,8 @@
         "title": "HeatConductor-Optionen",
         "menu_options": {
           "entities": "Zentrale Entitäten",
-          "parameters": "Regelparameter"
+          "parameters": "Regelparameter",
+          "energy": "Energie und Gas"
         }
       },
       "entities": {
@@ -47,7 +50,12 @@
           "flow_temperature": "Vorlauftemperatur",
           "return_temperature": "Rücklauftemperatur",
           "gas_flow": "Gasdurchfluss (m³/h)",
-          "burner_sensor": "Sensor „Brenner aktiv“"
+          "burner_sensor": "Sensor „Brenner aktiv“",
+          "gas_meter": "Gaszählerstand (m³)"
+        },
+        "data_description": {
+          "gas_meter": "Fortlaufender Zählerstand, z. B. der Gesamtwert eines ESPHome-Impulszählers. Genauer als das Aufsummieren des Durchflusses.",
+          "gas_flow": "Dient zur Erkennung, ob der Brenner brennt, und für die Brennerleistung. Ohne Zählerstand wird daraus der Verbrauch aufsummiert."
         }
       },
       "parameters": {
@@ -73,6 +81,22 @@
           "start_threshold": "Der Kessel startet, wenn der gewichtete Bedarf aller Räume für die Bestätigungszeit über diesem Wert liegt.",
           "immediate_start_deficit": "Liegt ein Raum so weit unter seinem Sollwert, startet der Kessel ohne Bestätigungszeit.",
           "heating_limit": "Über dieser geglätteten Außentemperatur bleibt der Kessel aus (außer im Komfort-Modus und bei Frostschutz)."
+        }
+      },
+      "energy": {
+        "title": "Energie und Gas",
+        "description": "Werte aus der Gasabrechnung und vom Typenschild des Kessels. Änderungen gelten für den ab jetzt erfassten Verbrauch.",
+        "data": {
+          "calorific_value": "Brennwert Hs",
+          "z_factor": "Zustandszahl",
+          "burner_max_power": "Nennbelastung des Kessels (Typenschild)",
+          "condensing_return_limit": "Rücklaufgrenze für Brennwertnutzung"
+        },
+        "data_description": {
+          "calorific_value": "Brennwert laut Gasabrechnung, typisch 10–12 kWh/m³.",
+          "z_factor": "Rechnet das gemessene Volumen auf Normbedingungen um, siehe Gasabrechnung (typisch 0,93–0,98).",
+          "burner_max_power": "Maximale Belastung Q (Hi) in kW vom Typenschild. 0 = unbekannt, dann wird keine Modulation angezeigt.",
+          "condensing_return_limit": "Unter dieser Rücklauftemperatur kondensiert das Abgas (Erdgas: ca. 55 °C)."
         }
       }
     },
@@ -138,9 +162,18 @@
   },
   "entity": {
     "binary_sensor": {
-      "heat_request": { "name": "Wärmeanforderung" },
-      "burner_active": { "name": "Brenner aktiv" },
-      "problem": { "name": "Störung" }
+      "heat_request": {
+        "name": "Wärmeanforderung"
+      },
+      "burner_active": {
+        "name": "Brenner aktiv"
+      },
+      "problem": {
+        "name": "Störung"
+      },
+      "condensing": {
+        "name": "Brennwertnutzung"
+      }
     },
     "select": {
       "operating_mode": {
@@ -157,7 +190,9 @@
       }
     },
     "sensor": {
-      "total_demand": { "name": "Gesamtbedarf" },
+      "total_demand": {
+        "name": "Gesamtbedarf"
+      },
       "boiler_state": {
         "name": "Kesselstatus",
         "state": {
@@ -195,15 +230,33 @@
           "demand_satisfied": "Bedarf gedeckt"
         }
       },
-      "outdoor_temperature": { "name": "Außentemperatur" },
-      "outdoor_temperature_smoothed": { "name": "Außentemperatur geglättet" },
-      "boiler_starts_today": { "name": "Kesselstarts heute" },
-      "boiler_runtime_today": { "name": "Kessellaufzeit heute" },
-      "burner_starts_today": { "name": "Brennerstarts heute" },
-      "burner_runtime_today": { "name": "Brennerlaufzeit heute" },
-      "temperature_spread": { "name": "Spreizung Vor-/Rücklauf" },
-      "room_demand": { "name": "Bedarf" },
-      "room_temperature": { "name": "Temperatur" },
+      "outdoor_temperature": {
+        "name": "Außentemperatur"
+      },
+      "outdoor_temperature_smoothed": {
+        "name": "Außentemperatur geglättet"
+      },
+      "boiler_starts_today": {
+        "name": "Kesselstarts heute"
+      },
+      "boiler_runtime_today": {
+        "name": "Kessellaufzeit heute"
+      },
+      "burner_starts_today": {
+        "name": "Brennerstarts heute"
+      },
+      "burner_runtime_today": {
+        "name": "Brennerlaufzeit heute"
+      },
+      "temperature_spread": {
+        "name": "Spreizung Vor-/Rücklauf"
+      },
+      "room_demand": {
+        "name": "Bedarf"
+      },
+      "room_temperature": {
+        "name": "Temperatur"
+      },
       "room_status": {
         "name": "Status",
         "state": {
@@ -213,11 +266,45 @@
           "window_open": "Fenster offen",
           "monitor_only": "Nur überwacht"
         }
+      },
+      "gas_volume": {
+        "name": "Gasverbrauch"
+      },
+      "gas_energy": {
+        "name": "Gasenergie"
+      },
+      "gas_energy_today": {
+        "name": "Gasenergie heute"
+      },
+      "gas_energy_yesterday": {
+        "name": "Gasenergie gestern"
+      },
+      "burner_power": {
+        "name": "Brennerleistung"
+      },
+      "burner_modulation": {
+        "name": "Brennermodulation"
+      },
+      "condensing_share_today": {
+        "name": "Brennwertanteil heute"
+      },
+      "outdoor_mean_today": {
+        "name": "Außentemperatur Tagesmittel"
+      },
+      "degree_days_yesterday": {
+        "name": "Gradtagzahl gestern"
+      },
+      "energy_per_degree_day_yesterday": {
+        "name": "Energie je Gradtag gestern"
       }
     },
     "switch": {
-      "automation": { "name": "Automatik" },
-      "observation_mode": { "name": "Beobachtungsmodus" }
+      "automation": {
+        "name": "Automatik"
+      },
+      "observation_mode": {
+        "name": "Beobachtungsmodus"
+      }
     }
   }
 }

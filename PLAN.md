@@ -1,7 +1,7 @@
 # HeatConductor – Projektplan
 
 > Home-Assistant-Integration (HACS) zur ganzheitlichen Steuerung der Heizungsanlage.
-> Stand: 2026-09-14 · Status: **Freigegeben, Phase 1 umgesetzt (Beobachtung)** · Domain: `heat_conductor`
+> Stand: 2026-09-14 · Status: **Phase 1 umgesetzt (Beobachtung), Phase 2 umgesetzt (Analyse)** · Domain: `heat_conductor`
 
 ---
 
@@ -374,6 +374,7 @@ hacs.json  README.md  PLAN.md  LICENSE
 | 2026-09-14 | Panel: Was-wäre-wenn-Simulation (Teil D) wird mit eingeplant |
 | 2026-09-14 | Lernen (Teil C) wird noch nicht gestartet, nur festgehalten |
 | 2026-09-14 | Panel zweisprachig Deutsch/Englisch |
+| 2026-09-14 | Phase 2 gestartet und umgesetzt: Gas m³/kWh (Zählerstand bevorzugt), Leistung/Modulation, Brennwertnutzung, Gradtage VDI 3807 (20/15) |
 
 ---
 

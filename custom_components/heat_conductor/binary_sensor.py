@@ -24,8 +24,10 @@ async def async_setup_entry(
         HeatRequestSensor(coordinator),
         ProblemSensor(coordinator),
     ]
-    if coordinator.gas_flow is not None or coordinator.burner_sensor is not None:
+    if coordinator.has_gas_source or coordinator.burner_sensor is not None:
         entities.append(BurnerActiveSensor(coordinator))
+        if coordinator.return_temperature is not None:
+            entities.append(CondensingSensor(coordinator))
     async_add_entities(entities)
 
 
@@ -60,6 +62,23 @@ class BurnerActiveSensor(HeatConductorEntity, BinarySensorEntity):
     def is_on(self) -> bool | None:
         """Return whether the burner fires."""
         return self.coordinator.data.burner_active
+
+
+class CondensingSensor(HeatConductorEntity, BinarySensorEntity):
+    """On while the burner fires with a return temperature low enough to condense."""
+
+    def __init__(self, coordinator: HeatConductorCoordinator) -> None:
+        super().__init__(coordinator, "condensing")
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return whether the boiler currently condenses."""
+        return self.coordinator.data.energy.condensing
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Show the configured limit."""
+        return {"return_temperature_limit": self.coordinator.energy_params.condensing_return_limit}
 
 
 class ProblemSensor(HeatConductorEntity, BinarySensorEntity):

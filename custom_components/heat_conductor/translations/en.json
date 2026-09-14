@@ -12,13 +12,15 @@
           "flow_temperature": "Flow temperature",
           "return_temperature": "Return temperature",
           "gas_flow": "Gas flow (m³/h)",
-          "burner_sensor": "Burner active sensor"
+          "burner_sensor": "Burner active sensor",
+          "gas_meter": "Gas meter reading (m³)"
         },
         "data_description": {
           "boiler_switch": "Switch that releases the boiler (e.g. Shelly on terminals 3-4). Optional during observation.",
           "outdoor_sensors": "Several sensors are combined; a sun-exposed outlier is ignored.",
-          "gas_flow": "Used to detect whether the burner actually fires.",
-          "burner_sensor": "Optional, e.g. from boiler diagnostics. Takes precedence over gas flow."
+          "gas_flow": "Used to detect whether the burner fires and for burner power. Without a meter reading it is integrated to consumption.",
+          "burner_sensor": "Optional, e.g. from boiler diagnostics. Takes precedence over gas flow.",
+          "gas_meter": "Cumulative meter reading, e.g. the total of an ESPHome pulse counter. More accurate than integrating the flow."
         }
       }
     },
@@ -35,7 +37,8 @@
         "title": "HeatConductor options",
         "menu_options": {
           "entities": "Central entities",
-          "parameters": "Control parameters"
+          "parameters": "Control parameters",
+          "energy": "Energy and gas"
         }
       },
       "entities": {
@@ -47,7 +50,12 @@
           "flow_temperature": "Flow temperature",
           "return_temperature": "Return temperature",
           "gas_flow": "Gas flow (m³/h)",
-          "burner_sensor": "Burner active sensor"
+          "burner_sensor": "Burner active sensor",
+          "gas_meter": "Gas meter reading (m³)"
+        },
+        "data_description": {
+          "gas_meter": "Cumulative meter reading, e.g. the total of an ESPHome pulse counter. More accurate than integrating the flow.",
+          "gas_flow": "Used to detect whether the burner fires and for burner power. Without a meter reading it is integrated to consumption."
         }
       },
       "parameters": {
@@ -73,6 +81,22 @@
           "start_threshold": "The boiler starts when the weighted demand of all rooms stays above this value for the confirmation time.",
           "immediate_start_deficit": "A room this far below its target starts the boiler without confirmation.",
           "heating_limit": "Above this smoothed outdoor temperature the boiler stays off (except in comfort mode and for frost protection)."
+        }
+      },
+      "energy": {
+        "title": "Energy and gas",
+        "description": "Values from your gas bill and the boiler type plate. Changes apply to consumption recorded from now on.",
+        "data": {
+          "calorific_value": "Calorific value Hs",
+          "z_factor": "Conversion factor (Zustandszahl)",
+          "burner_max_power": "Rated boiler load (type plate)",
+          "condensing_return_limit": "Return temperature limit for condensing"
+        },
+        "data_description": {
+          "calorific_value": "Gross calorific value from the gas bill, typically 10–12 kWh/m³.",
+          "z_factor": "Converts the metered volume to standard conditions, see gas bill (typically 0.93–0.98).",
+          "burner_max_power": "Maximum load Q (Hi) in kW from the type plate. 0 = unknown, then no modulation is shown.",
+          "condensing_return_limit": "Below this return temperature flue gas condenses (natural gas: approx. 55 °C)."
         }
       }
     },
@@ -138,9 +162,18 @@
   },
   "entity": {
     "binary_sensor": {
-      "heat_request": { "name": "Heat request" },
-      "burner_active": { "name": "Burner active" },
-      "problem": { "name": "Problem" }
+      "heat_request": {
+        "name": "Heat request"
+      },
+      "burner_active": {
+        "name": "Burner active"
+      },
+      "problem": {
+        "name": "Problem"
+      },
+      "condensing": {
+        "name": "Condensing"
+      }
     },
     "select": {
       "operating_mode": {
@@ -157,7 +190,9 @@
       }
     },
     "sensor": {
-      "total_demand": { "name": "Total demand" },
+      "total_demand": {
+        "name": "Total demand"
+      },
       "boiler_state": {
         "name": "Boiler state",
         "state": {
@@ -195,15 +230,33 @@
           "demand_satisfied": "Demand satisfied"
         }
       },
-      "outdoor_temperature": { "name": "Outdoor temperature" },
-      "outdoor_temperature_smoothed": { "name": "Outdoor temperature smoothed" },
-      "boiler_starts_today": { "name": "Boiler starts today" },
-      "boiler_runtime_today": { "name": "Boiler runtime today" },
-      "burner_starts_today": { "name": "Burner starts today" },
-      "burner_runtime_today": { "name": "Burner runtime today" },
-      "temperature_spread": { "name": "Flow/return spread" },
-      "room_demand": { "name": "Demand" },
-      "room_temperature": { "name": "Temperature" },
+      "outdoor_temperature": {
+        "name": "Outdoor temperature"
+      },
+      "outdoor_temperature_smoothed": {
+        "name": "Outdoor temperature smoothed"
+      },
+      "boiler_starts_today": {
+        "name": "Boiler starts today"
+      },
+      "boiler_runtime_today": {
+        "name": "Boiler runtime today"
+      },
+      "burner_starts_today": {
+        "name": "Burner starts today"
+      },
+      "burner_runtime_today": {
+        "name": "Burner runtime today"
+      },
+      "temperature_spread": {
+        "name": "Flow/return spread"
+      },
+      "room_demand": {
+        "name": "Demand"
+      },
+      "room_temperature": {
+        "name": "Temperature"
+      },
       "room_status": {
         "name": "Status",
         "state": {
@@ -213,11 +266,45 @@
           "window_open": "Window open",
           "monitor_only": "Monitor only"
         }
+      },
+      "gas_volume": {
+        "name": "Gas consumption"
+      },
+      "gas_energy": {
+        "name": "Gas energy"
+      },
+      "gas_energy_today": {
+        "name": "Gas energy today"
+      },
+      "gas_energy_yesterday": {
+        "name": "Gas energy yesterday"
+      },
+      "burner_power": {
+        "name": "Burner power"
+      },
+      "burner_modulation": {
+        "name": "Burner modulation"
+      },
+      "condensing_share_today": {
+        "name": "Condensing share today"
+      },
+      "outdoor_mean_today": {
+        "name": "Outdoor temperature mean today"
+      },
+      "degree_days_yesterday": {
+        "name": "Heating degree days yesterday"
+      },
+      "energy_per_degree_day_yesterday": {
+        "name": "Energy per degree day yesterday"
       }
     },
     "switch": {
-      "automation": { "name": "Automation" },
-      "observation_mode": { "name": "Observation mode" }
+      "automation": {
+        "name": "Automation"
+      },
+      "observation_mode": {
+        "name": "Observation mode"
+      }
     }
   }
 }

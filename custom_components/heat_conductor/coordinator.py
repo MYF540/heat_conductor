@@ -21,6 +21,8 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfTemperature,
+    UnitOfVolume,
+    UnitOfVolumeFlowRate,
 )
 from homeassistant.core import (
     CALLBACK_TYPE,
@@ -41,12 +43,16 @@ from .const import (
     COMMAND_RETRY_INTERVAL,
     CONF_BOILER_SWITCH,
     CONF_BURNER_FLOW_THRESHOLD,
+    CONF_BURNER_MAX_POWER,
     CONF_BURNER_SENSOR,
+    CONF_CALORIFIC_VALUE,
     CONF_CLIMATES,
+    CONF_CONDENSING_RETURN_LIMIT,
     CONF_DEFICIT_FULL_SCALE,
     CONF_FLOW_TEMPERATURE,
     CONF_FROST_LIMIT,
     CONF_GAS_FLOW,
+    CONF_GAS_METER,
     CONF_HEATING_LIMIT,
     CONF_IMMEDIATE_DEFICIT,
     CONF_MANUAL_OVERRIDE,
@@ -67,7 +73,9 @@ from .const import (
     CONF_WEATHER,
     CONF_WEIGHT,
     CONF_WINDOWS,
+    CONF_Z_FACTOR,
     DOMAIN,
+    ENERGY_DEFAULTS,
     PARAMETER_DEFAULTS,
     STORAGE_SAVE_DELAY,
     STORAGE_VERSION,
@@ -75,6 +83,7 @@ from .const import (
     UPDATE_INTERVAL,
 )
 from .core.demand import RoomInput
+from .core.energy import EnergyParams
 from .core.engine import EngineResult, EngineSnapshot, HeatingEngine
 from .core.models import MISSING, ControlParams, OperatingMode, Reading, RoomKind
 
@@ -154,6 +163,20 @@ def params_from_options(options: dict[str, Any]) -> ControlParams:
     )
 
 
+def energy_params_from_options(options: dict[str, Any]) -> EnergyParams:
+    """Gas and boiler constants from the options."""
+
+    def opt(key: str) -> float:
+        return float(options.get(key, ENERGY_DEFAULTS[key]))
+
+    return EnergyParams(
+        calorific_value=opt(CONF_CALORIFIC_VALUE),
+        z_factor=opt(CONF_Z_FACTOR),
+        burner_max_power=opt(CONF_BURNER_MAX_POWER),
+        condensing_return_limit=opt(CONF_CONDENSING_RETURN_LIMIT),
+    )
+
+
 class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
     """Runs an evaluation every 30 s and on every relevant state change."""
 
@@ -169,7 +192,8 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
         )
         options = entry.options
         self.params = params_from_options(dict(options))
-        self.engine = HeatingEngine(self.params)
+        self.energy_params = energy_params_from_options(dict(options))
+        self.engine = HeatingEngine(self.params, self.energy_params)
         self.settings = Settings()
         self.rooms = tuple(
             RoomConfig.from_subentry(s)
@@ -180,6 +204,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
         self.flow_temperature: str | None = options.get(CONF_FLOW_TEMPERATURE) or None
         self.return_temperature: str | None = options.get(CONF_RETURN_TEMPERATURE) or None
         self.gas_flow: str | None = options.get(CONF_GAS_FLOW) or None
+        self.gas_meter: str | None = options.get(CONF_GAS_METER) or None
         self.burner_sensor: str | None = options.get(CONF_BURNER_SENSOR) or None
         self.outdoor_sensors: tuple[str, ...] = tuple(options.get(CONF_OUTDOOR_SENSORS, []))
         self.weather: str | None = options.get(CONF_WEATHER) or None
@@ -227,6 +252,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
             self.flow_temperature,
             self.return_temperature,
             self.gas_flow,
+            self.gas_meter,
             self.burner_sensor,
             self.weather,
         ):
@@ -339,7 +365,8 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
             return_temperature=(
                 self._temperature(self.return_temperature) if self.return_temperature else None
             ),
-            gas_flow=self._number(self.gas_flow) if self.gas_flow else None,
+            gas_flow=self._gas_flow(self.gas_flow) if self.gas_flow else None,
+            gas_meter=self._gas_volume(self.gas_meter) if self.gas_meter else None,
             burner_on=self._binary(self.burner_sensor) if self.burner_sensor else None,
             relay_on=self._binary(self.boiler_switch) if self.boiler_switch else None,
             mode=self.settings.mode,
@@ -377,6 +404,29 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
             return MISSING
         value = _to_float(state.state)
         return Reading(value, state.last_reported) if value is not None else MISSING
+
+    @property
+    def has_gas_source(self) -> bool:
+        """Whether gas consumption can be measured."""
+        return self.gas_flow is not None or self.gas_meter is not None
+
+    def _gas_volume(self, entity_id: str) -> Reading:
+        """Meter total in m³ (litres are converted)."""
+        reading = self._number(entity_id)
+        state = self._state(entity_id)
+        if reading.value is None or state is None:
+            return reading
+        factor = _VOLUME_FACTORS.get(state.attributes.get(ATTR_UNIT_OF_MEASUREMENT), 1.0)
+        return Reading(reading.value * factor, reading.last_reported)
+
+    def _gas_flow(self, entity_id: str) -> Reading:
+        """Flow in m³/h (l/h and l/min are converted)."""
+        reading = self._number(entity_id)
+        state = self._state(entity_id)
+        if reading.value is None or state is None:
+            return reading
+        factor = _FLOW_FACTORS.get(state.attributes.get(ATTR_UNIT_OF_MEASUREMENT), 1.0)
+        return Reading(reading.value * factor, reading.last_reported)
 
     def _temperature(self, entity_id: str) -> Reading:
         state = self._state(entity_id)
@@ -424,6 +474,17 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
         if unit == UnitOfTemperature.FAHRENHEIT:
             value = TemperatureConverter.convert(value, unit, UnitOfTemperature.CELSIUS)
         return Reading(value, state.last_reported)
+
+
+_VOLUME_FACTORS: dict[str | None, float] = {
+    UnitOfVolume.CUBIC_METERS: 1.0,
+    UnitOfVolume.LITERS: 0.001,
+}
+_FLOW_FACTORS: dict[str | None, float] = {
+    UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR: 1.0,
+    UnitOfVolumeFlowRate.LITERS_PER_HOUR: 0.001,
+    UnitOfVolumeFlowRate.LITERS_PER_MINUTE: 0.06,
+}
 
 
 def _to_float(value: Any) -> float | None:

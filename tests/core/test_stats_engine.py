@@ -47,6 +47,7 @@ def _snapshot(now: datetime, valve: float) -> EngineSnapshot:
         flow_temperature=fresh(45.0, now),
         return_temperature=fresh(38.0, now),
         gas_flow=fresh(1.2, now),
+        gas_meter=None,
         burner_on=None,
         relay_on=None,
         mode=OperatingMode.AUTO,
@@ -69,3 +70,4 @@ def test_engine_end_to_end_and_persistence() -> None:
     restored.restore(engine.to_dict())
     assert restored.boiler.is_on
     assert restored.outdoor_smoother.value == 3.0
+    assert result.energy.burner_power is not None
