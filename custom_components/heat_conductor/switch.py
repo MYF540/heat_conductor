@@ -35,6 +35,11 @@ SWITCHES: tuple[HeatConductorSwitchDescription, ...] = (
         value_fn=lambda s: s.observation_mode,
         set_fn=lambda c, v: c.async_set_observation(v),
     ),
+    HeatConductorSwitchDescription(
+        key="room_control",
+        value_fn=lambda s: s.room_control_enabled,
+        set_fn=lambda c, v: c.async_set_room_control(v),
+    ),
 )
 
 

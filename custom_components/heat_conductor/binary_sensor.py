@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -28,6 +29,8 @@ async def async_setup_entry(
         entities.append(BurnerActiveSensor(coordinator))
         if coordinator.return_temperature is not None:
             entities.append(CondensingSensor(coordinator))
+    if coordinator.entities.watchdog_url is not None:
+        entities.append(WatchdogSensor(coordinator))
     async_add_entities(entities)
 
 
@@ -79,6 +82,30 @@ class CondensingSensor(HeatConductorEntity, BinarySensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Show the configured limit."""
         return {"return_temperature_limit": self.coordinator.energy_params.condensing_return_limit}
+
+
+class WatchdogSensor(HeatConductorEntity, BinarySensorEntity):
+    """On while the relay watchdog accepts heartbeats."""
+
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: HeatConductorCoordinator) -> None:
+        super().__init__(coordinator, "watchdog")
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return whether the watchdog is reachable."""
+        return self.coordinator.watchdog_connected()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Last successful heartbeat and whether the watchdog is armed."""
+        last = self.coordinator.watchdog_ok_at
+        return {
+            "last_heartbeat": last.isoformat() if last else None,
+            "armed": self.coordinator.actuator_active,
+        }
 
 
 class ProblemSensor(HeatConductorEntity, BinarySensorEntity):

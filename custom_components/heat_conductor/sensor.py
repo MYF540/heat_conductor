@@ -14,6 +14,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     PERCENTAGE,
+    EntityCategory,
     UnitOfEnergy,
     UnitOfPower,
     UnitOfTemperature,
@@ -215,6 +216,16 @@ CENTRAL_SENSORS: tuple[HeatConductorSensorDescription, ...] = (
         ),
     ),
     HeatConductorSensorDescription(
+        key="outdoor_forecast",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        value_fn=lambda r: _round(r.forecast_12h),
+        attributes_fn=lambda r: {"next_6h": _round(r.forecast_6h)},
+        exists_fn=lambda c: c.entities.weather is not None,
+    ),
+    HeatConductorSensorDescription(
         key="outdoor_mean_today",
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
@@ -290,6 +301,15 @@ async def async_setup_entry(
         CentralSensor(coordinator, d) for d in CENTRAL_SENSORS if d.exists_fn(coordinator)
     )
     for room in coordinator.rooms:
+        if room.kind is RoomKind.REGULATED:
+            async_add_entities(
+                [
+                    RoomTargetSensor(coordinator, room),
+                    RoomLearningSensor(coordinator, room, "heat_rate"),
+                    RoomLearningSensor(coordinator, room, "cooling_tau"),
+                ],
+                config_subentry_id=room.room_id,
+            )
         async_add_entities(
             (
                 RoomSensor(coordinator, room, d)
@@ -351,3 +371,66 @@ class RoomSensor(RoomEntity, SensorEntity):
         if data is None or self.entity_description.attributes_fn is None:
             return None
         return self.entity_description.attributes_fn(data)
+
+
+class RoomTargetSensor(RoomEntity, SensorEntity):
+    """Effective target temperature of a room and why."""
+
+    _attr_device_class = SensorDeviceClass.TEMPERATURE
+    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: HeatConductorCoordinator, room: RoomConfig) -> None:
+        super().__init__(coordinator, room, "room_target")
+
+    @property
+    def native_value(self) -> float | None:
+        """Target temperature."""
+        setpoint = (
+            self.coordinator.data.setpoint(self.room.room_id) if self.coordinator.data else None
+        )
+        return setpoint.target if setpoint else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Source of the target."""
+        setpoint = (
+            self.coordinator.data.setpoint(self.room.room_id) if self.coordinator.data else None
+        )
+        if setpoint is None:
+            return None
+        return {"source": setpoint.source.value}
+
+
+class RoomLearningSensor(RoomEntity, SensorEntity):
+    """Learned thermal value of a room."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: HeatConductorCoordinator, room: RoomConfig, key: str) -> None:
+        super().__init__(coordinator, room, f"room_{key}")
+        self._key = key
+        self._attr_native_unit_of_measurement = "K/h" if key == "heat_rate" else "h"
+        self._attr_suggested_display_precision = 2 if key == "heat_rate" else 1
+
+    def _stat(self):  # type: ignore[no-untyped-def]
+        learner = self.coordinator.engine.learner.room(self.room.room_id)
+        return learner.heat_rate["all"] if self._key == "heat_rate" else learner.cooling_tau
+
+    @property
+    def available(self) -> bool:
+        """Learned values are available independent of current data."""
+        return self.coordinator.last_update_success
+
+    @property
+    def native_value(self) -> float | None:
+        """Learned mean once enough samples exist."""
+        stat = self._stat()
+        return round(stat.mean, 3) if stat.usable() else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Sample count and spread."""
+        stat = self._stat()
+        return {"samples": stat.count, "std": round(stat.std, 3) if stat.count > 1 else None}

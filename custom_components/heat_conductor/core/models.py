@@ -61,6 +61,7 @@ class Reason(StrEnum):
     DEMAND_CONTINUES = "demand_continues"
     MIN_RUNTIME = "min_runtime"
     DEMAND_SATISFIED = "demand_satisfied"
+    RESIDUAL_HEAT = "residual_heat"
 
 
 class RoomStatus(StrEnum):
@@ -115,3 +116,6 @@ class ControlParams:
     manual_override: timedelta = timedelta(minutes=60)
     startup_grace: timedelta = timedelta(minutes=2)
     burner_flow_threshold: float = 0.2
+    residual_heat_stop: bool = True
+    residual_heat_margin: float = 0.2
+    use_forecast: bool = True

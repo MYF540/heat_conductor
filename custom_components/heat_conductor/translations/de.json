@@ -13,14 +13,24 @@
           "return_temperature": "Rücklauftemperatur",
           "gas_flow": "Gasdurchfluss (m³/h)",
           "burner_sensor": "Sensor „Brenner aktiv“",
-          "gas_meter": "Gaszählerstand (m³)"
+          "gas_meter": "Gaszählerstand (m³)",
+          "watchdog_url": "URL des Relais-Watchdogs",
+          "presence_entities": "Anwesenheit",
+          "duty_cycle_sensor": "Sensor Funk-Duty-Cycle",
+          "flow_setpoint_sensor": "Vorlauf-Soll des Kesselreglers",
+          "solar_power_sensor": "PV-Leistung"
         },
         "data_description": {
           "boiler_switch": "Schalter, der den Kessel freigibt (z. B. Shelly an Klemme 3-4). Im Beobachtungsmodus optional.",
           "outdoor_sensors": "Mehrere Sensoren werden kombiniert; ein von der Sonne beschienener Ausreißer wird ignoriert.",
           "gas_flow": "Dient zur Erkennung, ob der Brenner brennt, und für die Brennerleistung. Ohne Zählerstand wird daraus der Verbrauch aufsummiert.",
           "burner_sensor": "Optional, z. B. aus der Kesseldiagnose. Hat Vorrang vor dem Gasdurchfluss.",
-          "gas_meter": "Fortlaufender Zählerstand, z. B. der Gesamtwert eines ESPHome-Impulszählers. Genauer als das Aufsummieren des Durchflusses."
+          "gas_meter": "Fortlaufender Zählerstand, z. B. der Gesamtwert eines ESPHome-Impulszählers. Genauer als das Aufsummieren des Durchflusses.",
+          "watchdog_url": "Heartbeat-Adresse des Shelly-Skripts, z. B. http://192.168.1.50/script/1/heartbeat. Bleiben die Heartbeats aus, schaltet das Relais ab.",
+          "presence_entities": "Personen, Geräte-Tracker oder Schalter. Ist niemand zu Hause, nutzen die Räume ihre Eco-Temperatur.",
+          "duty_cycle_sensor": "z. B. Duty Cycle des HomematicIP Access Points. Über dem Grenzwert pausieren Schreibvorgänge an Thermostate.",
+          "flow_setpoint_sensor": "Optional, z. B. aus der Kesseldiagnose (X6). Dient zum Lernen der Heizkurve.",
+          "solar_power_sensor": "Optionale PV-Leistung als Maß für Sonnengewinne in Räumen mit großen Glasflächen."
         }
       }
     },
@@ -38,7 +48,9 @@
         "menu_options": {
           "entities": "Zentrale Entitäten",
           "parameters": "Regelparameter",
-          "energy": "Energie und Gas"
+          "energy": "Energie und Gas",
+          "room_control": "Raumsteuerung",
+          "learning": "Lernen und Vorausschau"
         }
       },
       "entities": {
@@ -51,11 +63,21 @@
           "return_temperature": "Rücklauftemperatur",
           "gas_flow": "Gasdurchfluss (m³/h)",
           "burner_sensor": "Sensor „Brenner aktiv“",
-          "gas_meter": "Gaszählerstand (m³)"
+          "gas_meter": "Gaszählerstand (m³)",
+          "watchdog_url": "URL des Relais-Watchdogs",
+          "presence_entities": "Anwesenheit",
+          "duty_cycle_sensor": "Sensor Funk-Duty-Cycle",
+          "flow_setpoint_sensor": "Vorlauf-Soll des Kesselreglers",
+          "solar_power_sensor": "PV-Leistung"
         },
         "data_description": {
           "gas_meter": "Fortlaufender Zählerstand, z. B. der Gesamtwert eines ESPHome-Impulszählers. Genauer als das Aufsummieren des Durchflusses.",
-          "gas_flow": "Dient zur Erkennung, ob der Brenner brennt, und für die Brennerleistung. Ohne Zählerstand wird daraus der Verbrauch aufsummiert."
+          "gas_flow": "Dient zur Erkennung, ob der Brenner brennt, und für die Brennerleistung. Ohne Zählerstand wird daraus der Verbrauch aufsummiert.",
+          "watchdog_url": "Heartbeat-Adresse des Shelly-Skripts, z. B. http://192.168.1.50/script/1/heartbeat. Bleiben die Heartbeats aus, schaltet das Relais ab.",
+          "presence_entities": "Personen, Geräte-Tracker oder Schalter. Ist niemand zu Hause, nutzen die Räume ihre Eco-Temperatur.",
+          "duty_cycle_sensor": "z. B. Duty Cycle des HomematicIP Access Points. Über dem Grenzwert pausieren Schreibvorgänge an Thermostate.",
+          "flow_setpoint_sensor": "Optional, z. B. aus der Kesseldiagnose (X6). Dient zum Lernen der Heizkurve.",
+          "solar_power_sensor": "Optionale PV-Leistung als Maß für Sonnengewinne in Räumen mit großen Glasflächen."
         }
       },
       "parameters": {
@@ -98,6 +120,55 @@
           "burner_max_power": "Maximale Belastung Q (Hi) in kW vom Typenschild. 0 = unbekannt, dann wird keine Modulation angezeigt.",
           "condensing_return_limit": "Unter dieser Rücklauftemperatur kondensiert das Abgas (Erdgas: ca. 55 °C)."
         }
+      },
+      "room_control": {
+        "title": "Raumsteuerung",
+        "data": {
+          "default_comfort": "Standard-Komforttemperatur",
+          "default_eco": "Standard-Eco-Temperatur",
+          "vacation_temperature": "Urlaubstemperatur",
+          "frost_temperature": "Frostschutz-Sollwert",
+          "window_temperature": "Temperatur bei offenem Fenster",
+          "boost_temperature": "Boost-Temperatur",
+          "boost_duration": "Boost-Dauer",
+          "override_duration": "Dauer manueller Übersteuerung",
+          "write_interval": "Mindestabstand automatischer Schreibvorgänge",
+          "compensation_max": "Maximale Sensorkorrektur",
+          "duty_cycle_limit": "Duty-Cycle-Grenze",
+          "force_manual_mode": "Thermostate auf manuellen Modus stellen",
+          "adopt_trv_changes": "Änderungen am Thermostat übernehmen"
+        },
+        "data_description": {
+          "default_comfort": "Anfangswert für neue Räume (je Raum änderbar).",
+          "default_eco": "Anfangswert der Absenktemperatur für neue Räume (je Raum änderbar).",
+          "vacation_temperature": "Solltemperatur aller Räume während eines Urlaubs.",
+          "frost_temperature": "Solltemperatur, wenn ein Raum oder die Anlage ausgeschaltet ist.",
+          "window_temperature": "Solltemperatur, solange ein Fenster offen ist.",
+          "boost_temperature": "Solltemperatur während eines Boosts.",
+          "override_duration": "Eine manuelle Solltemperatur gilt so lange oder bis zum nächsten Zeitplanwechsel.",
+          "write_interval": "Schont Thermostat-Batterien und Funk-Duty-Cycle. Sollwertwechsel werden sofort geschrieben.",
+          "compensation_max": "Begrenzt die Korrektur zwischen Thermostat- und Raumsensor-Temperatur.",
+          "duty_cycle_limit": "Oberhalb dieses Werts werden keine automatischen Sollwerte geschrieben.",
+          "force_manual_mode": "Verhindert, dass eigene Zeitprofile der Thermostate gegen HeatConductor arbeiten.",
+          "adopt_trv_changes": "Wird ein Thermostat von Hand verstellt, gilt das als vorübergehende Übersteuerung des Raums."
+        },
+        "description": "HeatConductor schreibt nur an Thermostate, wenn der Schalter „Raumsteuerung“ eingeschaltet ist."
+      },
+      "learning": {
+        "title": "Lernen und Vorausschau",
+        "data": {
+          "optimum_start": "Optimaler Start",
+          "optimum_start_max_lead": "Maximale Vorlaufzeit optimaler Start",
+          "residual_heat": "Restwärme nutzen",
+          "use_forecast": "Wettervorhersage nutzen",
+          "solar_reference": "PV-Spitzenleistung für Sonnen-Proxy"
+        },
+        "data_description": {
+          "optimum_start": "Beginnt früh genug zu heizen, damit zum Zeitplanbeginn die Komforttemperatur erreicht ist (nutzt gelernte Aufheizraten).",
+          "residual_heat": "Stoppt den Brenner, wenn alle Räume über dem Soll liegen, damit die gespeicherte Wärme den Rest erledigt.",
+          "use_forecast": "Kältere Vorhersagen können die Heizgrenze aufheben und früher heizen lassen.",
+          "solar_reference": "0 = aus. Räume mit Sonnengewinnen ignorieren ihr Temperaturdefizit oberhalb von 40 % dieser Leistung."
+        }
       }
     },
     "error": {
@@ -121,13 +192,19 @@
             "valves": "Sensoren Ventilöffnung",
             "room_temperature": "Raumtemperatur-Sensor",
             "windows": "Fensterkontakte",
-            "weight": "Gewichtung"
+            "weight": "Gewichtung",
+            "schedule": "Zeitplan",
+            "compensation": "Mit Raumsensor korrigieren",
+            "solar_gain": "Raum mit großen Sonnengewinnen"
           },
           "data_description": {
             "climates": "Climate-Entitäten des Raums; deren Solltemperatur wird verwendet.",
             "valves": "Sensoren mit der Ventilöffnung in % (bei HomematicIP: „… Heating“).",
             "room_temperature": "Hat Vorrang vor der Temperatur des Thermostats.",
-            "weight": "Anteil des Raums am Gesamtbedarf, z. B. nach Heizkörpergröße."
+            "weight": "Anteil des Raums am Gesamtbedarf, z. B. nach Heizkörpergröße.",
+            "schedule": "Zeitplan-Helfer: an = Komfort, aus = Eco. Ohne Zeitplan gilt Komfort.",
+            "compensation": "Passt den Thermostat-Sollwert um die Differenz zwischen Thermostat und Raumsensor an.",
+            "solar_gain": "Nutzt die PV-Leistung als Maß für die Sonne."
           }
         },
         "reconfigure": {
@@ -139,7 +216,15 @@
             "valves": "Sensoren Ventilöffnung",
             "room_temperature": "Raumtemperatur-Sensor",
             "windows": "Fensterkontakte",
-            "weight": "Gewichtung"
+            "weight": "Gewichtung",
+            "schedule": "Zeitplan",
+            "compensation": "Mit Raumsensor korrigieren",
+            "solar_gain": "Raum mit großen Sonnengewinnen"
+          },
+          "data_description": {
+            "schedule": "Zeitplan-Helfer: an = Komfort, aus = Eco. Ohne Zeitplan gilt Komfort.",
+            "compensation": "Passt den Thermostat-Sollwert um die Differenz zwischen Thermostat und Raumsensor an.",
+            "solar_gain": "Nutzt die PV-Leistung als Maß für die Sonne."
           }
         }
       },
@@ -173,6 +258,9 @@
       },
       "condensing": {
         "name": "Brennwertnutzung"
+      },
+      "watchdog": {
+        "name": "Relais-Watchdog"
       }
     },
     "select": {
@@ -227,7 +315,8 @@
           "deficit_start": "Start wegen Temperaturdefizit",
           "demand_continues": "Heizt, Bedarf besteht",
           "min_runtime": "Mindestlaufzeit",
-          "demand_satisfied": "Bedarf gedeckt"
+          "demand_satisfied": "Bedarf gedeckt",
+          "residual_heat": "Restwärme reicht aus"
         }
       },
       "outdoor_temperature": {
@@ -296,6 +385,18 @@
       },
       "energy_per_degree_day_yesterday": {
         "name": "Energie je Gradtag gestern"
+      },
+      "outdoor_forecast": {
+        "name": "Außentemperatur Vorhersage 12 h"
+      },
+      "room_target": {
+        "name": "Solltemperatur"
+      },
+      "room_heat_rate": {
+        "name": "Gelernte Aufheizrate"
+      },
+      "room_cooling_tau": {
+        "name": "Gelernte Auskühl-Zeitkonstante"
       }
     },
     "switch": {
@@ -304,7 +405,97 @@
       },
       "observation_mode": {
         "name": "Beobachtungsmodus"
+      },
+      "room_control": {
+        "name": "Raumsteuerung"
       }
+    },
+    "climate": {
+      "room_climate": {
+        "name": "Thermostat"
+      }
+    },
+    "number": {
+      "comfort_temperature": {
+        "name": "Komforttemperatur"
+      },
+      "eco_temperature": {
+        "name": "Eco-Temperatur"
+      }
+    }
+  },
+  "issues": {
+    "no_data": {
+      "title": "Keine gültigen Raumdaten",
+      "description": "HeatConductor hat seit mehreren Minuten von keinem geregelten Raum gültige Daten und hält den Kessel aus. Prüfe Thermostate, Batterien und die Verbindung zum Access Point."
+    },
+    "relay_unavailable": {
+      "title": "Kessel-Relais nicht erreichbar",
+      "description": "Das eingestellte Kessel-Relais ist seit mehreren Minuten nicht erreichbar. HeatConductor kann den Kessel nicht schalten."
+    },
+    "watchdog_unreachable": {
+      "title": "Relais-Watchdog nicht erreichbar",
+      "description": "Die Heartbeats an den Relais-Watchdog schlagen seit mehreren Minuten fehl. Das Relais schaltet den Kessel ab. Prüfe das Shelly-Skript und die URL."
+    }
+  },
+  "services": {
+    "set_vacation": {
+      "name": "Urlaub festlegen",
+      "description": "Alle Räume nutzen zwischen Beginn und Ende die Urlaubstemperatur.",
+      "fields": {
+        "start": {
+          "name": "Beginn",
+          "description": "Leer = sofort."
+        },
+        "end": {
+          "name": "Ende"
+        },
+        "temperature": {
+          "name": "Temperatur",
+          "description": "Ersetzt die Urlaubstemperatur aus den Optionen."
+        }
+      }
+    },
+    "clear_vacation": {
+      "name": "Urlaub beenden",
+      "description": "Beendet einen geplanten oder laufenden Urlaub."
+    },
+    "reset_learning": {
+      "name": "Lerndaten zurücksetzen",
+      "description": "Vergisst gelernte Werte eines Raums oder alle.",
+      "fields": {
+        "room": {
+          "name": "Raum",
+          "description": "Name des Raums. Leer = alles."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Heizt einen Raum für eine Weile auf die Boost-Temperatur.",
+      "fields": {
+        "duration": {
+          "name": "Dauer"
+        },
+        "temperature": {
+          "name": "Temperatur"
+        }
+      }
+    },
+    "clear_override": {
+      "name": "Zurück zur Automatik",
+      "description": "Beendet Boost und manuelle Übersteuerung eines Raums."
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "HeatConductor ist nicht eingerichtet."
+    },
+    "vacation_order": {
+      "message": "Der Urlaubsbeginn muss vor dem Ende liegen."
+    },
+    "unknown_room": {
+      "message": "Unbekannter Raum: {room}"
     }
   }
 }

@@ -13,14 +13,24 @@
           "return_temperature": "Return temperature",
           "gas_flow": "Gas flow (m³/h)",
           "burner_sensor": "Burner active sensor",
-          "gas_meter": "Gas meter reading (m³)"
+          "gas_meter": "Gas meter reading (m³)",
+          "watchdog_url": "Relay watchdog URL",
+          "presence_entities": "Presence",
+          "duty_cycle_sensor": "Radio duty cycle sensor",
+          "flow_setpoint_sensor": "Flow setpoint of the boiler controller",
+          "solar_power_sensor": "Solar power"
         },
         "data_description": {
           "boiler_switch": "Switch that releases the boiler (e.g. Shelly on terminals 3-4). Optional during observation.",
           "outdoor_sensors": "Several sensors are combined; a sun-exposed outlier is ignored.",
           "gas_flow": "Used to detect whether the burner fires and for burner power. Without a meter reading it is integrated to consumption.",
           "burner_sensor": "Optional, e.g. from boiler diagnostics. Takes precedence over gas flow.",
-          "gas_meter": "Cumulative meter reading, e.g. the total of an ESPHome pulse counter. More accurate than integrating the flow."
+          "gas_meter": "Cumulative meter reading, e.g. the total of an ESPHome pulse counter. More accurate than integrating the flow.",
+          "watchdog_url": "Heartbeat endpoint of the Shelly script, e.g. http://192.168.1.50/script/1/heartbeat. The relay switches off when heartbeats stop.",
+          "presence_entities": "Persons, device trackers or switches. If nobody is home, rooms use their eco temperature.",
+          "duty_cycle_sensor": "e.g. the duty cycle of the HomematicIP access point. Thermostat writes pause above the limit.",
+          "flow_setpoint_sensor": "Optional, e.g. from boiler diagnostics (X6). Used to learn the heating curve.",
+          "solar_power_sensor": "Optional PV power as a proxy for solar gains in rooms with large glass areas."
         }
       }
     },
@@ -38,7 +48,9 @@
         "menu_options": {
           "entities": "Central entities",
           "parameters": "Control parameters",
-          "energy": "Energy and gas"
+          "energy": "Energy and gas",
+          "room_control": "Room control",
+          "learning": "Learning and anticipation"
         }
       },
       "entities": {
@@ -51,11 +63,21 @@
           "return_temperature": "Return temperature",
           "gas_flow": "Gas flow (m³/h)",
           "burner_sensor": "Burner active sensor",
-          "gas_meter": "Gas meter reading (m³)"
+          "gas_meter": "Gas meter reading (m³)",
+          "watchdog_url": "Relay watchdog URL",
+          "presence_entities": "Presence",
+          "duty_cycle_sensor": "Radio duty cycle sensor",
+          "flow_setpoint_sensor": "Flow setpoint of the boiler controller",
+          "solar_power_sensor": "Solar power"
         },
         "data_description": {
           "gas_meter": "Cumulative meter reading, e.g. the total of an ESPHome pulse counter. More accurate than integrating the flow.",
-          "gas_flow": "Used to detect whether the burner fires and for burner power. Without a meter reading it is integrated to consumption."
+          "gas_flow": "Used to detect whether the burner fires and for burner power. Without a meter reading it is integrated to consumption.",
+          "watchdog_url": "Heartbeat endpoint of the Shelly script, e.g. http://192.168.1.50/script/1/heartbeat. The relay switches off when heartbeats stop.",
+          "presence_entities": "Persons, device trackers or switches. If nobody is home, rooms use their eco temperature.",
+          "duty_cycle_sensor": "e.g. the duty cycle of the HomematicIP access point. Thermostat writes pause above the limit.",
+          "flow_setpoint_sensor": "Optional, e.g. from boiler diagnostics (X6). Used to learn the heating curve.",
+          "solar_power_sensor": "Optional PV power as a proxy for solar gains in rooms with large glass areas."
         }
       },
       "parameters": {
@@ -98,6 +120,55 @@
           "burner_max_power": "Maximum load Q (Hi) in kW from the type plate. 0 = unknown, then no modulation is shown.",
           "condensing_return_limit": "Below this return temperature flue gas condenses (natural gas: approx. 55 °C)."
         }
+      },
+      "room_control": {
+        "title": "Room control",
+        "data": {
+          "default_comfort": "Default comfort temperature",
+          "default_eco": "Default eco temperature",
+          "vacation_temperature": "Vacation temperature",
+          "frost_temperature": "Frost protection setpoint",
+          "window_temperature": "Window open temperature",
+          "boost_temperature": "Boost temperature",
+          "boost_duration": "Boost duration",
+          "override_duration": "Manual override duration",
+          "write_interval": "Minimum interval between automatic writes",
+          "compensation_max": "Maximum sensor compensation",
+          "duty_cycle_limit": "Duty cycle limit",
+          "force_manual_mode": "Switch thermostats to manual mode",
+          "adopt_trv_changes": "Adopt changes made at the thermostat"
+        },
+        "data_description": {
+          "default_comfort": "Initial comfort temperature of new rooms (adjustable per room).",
+          "default_eco": "Initial setback temperature of new rooms (adjustable per room).",
+          "vacation_temperature": "Target of all rooms during a vacation.",
+          "frost_temperature": "Target when a room or the system is switched off.",
+          "window_temperature": "Target while a window is open.",
+          "boost_temperature": "Target during a boost.",
+          "override_duration": "A manual target lasts this long or until the next schedule change.",
+          "write_interval": "Protects thermostat batteries and the radio duty cycle. Changes of the target are written immediately.",
+          "compensation_max": "Limits the correction between the thermostat's own and the room sensor temperature.",
+          "duty_cycle_limit": "Above this value no automatic thermostat writes happen.",
+          "force_manual_mode": "Prevents the thermostats' own schedules from working against HeatConductor.",
+          "adopt_trv_changes": "Turning a thermostat by hand becomes a temporary room override."
+        },
+        "description": "HeatConductor only writes to thermostats when the switch \"Room control\" is on."
+      },
+      "learning": {
+        "title": "Learning and anticipation",
+        "data": {
+          "optimum_start": "Optimum start",
+          "optimum_start_max_lead": "Maximum optimum start lead",
+          "residual_heat": "Use residual heat",
+          "use_forecast": "Use weather forecast",
+          "solar_reference": "PV peak power for sun proxy"
+        },
+        "data_description": {
+          "optimum_start": "Starts heating early enough to reach comfort temperature when the schedule begins (uses learned heat-up rates).",
+          "residual_heat": "Stops the burner when all rooms are above target so the stored heat does the rest.",
+          "use_forecast": "Colder forecasts can release the heating limit and start heating earlier.",
+          "solar_reference": "0 = off. Rooms with solar gains ignore their temperature deficit above 40 % of this power."
+        }
       }
     },
     "error": {
@@ -121,13 +192,19 @@
             "valves": "Valve position sensors",
             "room_temperature": "Room temperature sensor",
             "windows": "Window contacts",
-            "weight": "Weight"
+            "weight": "Weight",
+            "schedule": "Schedule",
+            "compensation": "Correct with room sensor",
+            "solar_gain": "Room with large solar gains"
           },
           "data_description": {
             "climates": "Climate entities of the room; their target temperature is used.",
             "valves": "Sensors reporting the valve opening in %.",
             "room_temperature": "Preferred over the thermostat's own temperature.",
-            "weight": "Share of this room in the total demand, e.g. by radiator size."
+            "weight": "Share of this room in the total demand, e.g. by radiator size.",
+            "schedule": "Schedule helper: on = comfort, off = eco. Without a schedule the room uses comfort.",
+            "compensation": "Adjusts the thermostat setpoint by the difference between thermostat and room sensor.",
+            "solar_gain": "Uses the PV power as a sun proxy."
           }
         },
         "reconfigure": {
@@ -139,7 +216,15 @@
             "valves": "Valve position sensors",
             "room_temperature": "Room temperature sensor",
             "windows": "Window contacts",
-            "weight": "Weight"
+            "weight": "Weight",
+            "schedule": "Schedule",
+            "compensation": "Correct with room sensor",
+            "solar_gain": "Room with large solar gains"
+          },
+          "data_description": {
+            "schedule": "Schedule helper: on = comfort, off = eco. Without a schedule the room uses comfort.",
+            "compensation": "Adjusts the thermostat setpoint by the difference between thermostat and room sensor.",
+            "solar_gain": "Uses the PV power as a sun proxy."
           }
         }
       },
@@ -173,6 +258,9 @@
       },
       "condensing": {
         "name": "Condensing"
+      },
+      "watchdog": {
+        "name": "Relay watchdog"
       }
     },
     "select": {
@@ -227,7 +315,8 @@
           "deficit_start": "Started on temperature deficit",
           "demand_continues": "Heating, demand continues",
           "min_runtime": "Minimum run time",
-          "demand_satisfied": "Demand satisfied"
+          "demand_satisfied": "Demand satisfied",
+          "residual_heat": "Residual heat is sufficient"
         }
       },
       "outdoor_temperature": {
@@ -296,6 +385,18 @@
       },
       "energy_per_degree_day_yesterday": {
         "name": "Energy per degree day yesterday"
+      },
+      "outdoor_forecast": {
+        "name": "Outdoor temperature forecast 12 h"
+      },
+      "room_target": {
+        "name": "Target temperature"
+      },
+      "room_heat_rate": {
+        "name": "Learned heat-up rate"
+      },
+      "room_cooling_tau": {
+        "name": "Learned cooling time constant"
       }
     },
     "switch": {
@@ -304,7 +405,97 @@
       },
       "observation_mode": {
         "name": "Observation mode"
+      },
+      "room_control": {
+        "name": "Room control"
       }
+    },
+    "climate": {
+      "room_climate": {
+        "name": "Thermostat"
+      }
+    },
+    "number": {
+      "comfort_temperature": {
+        "name": "Comfort temperature"
+      },
+      "eco_temperature": {
+        "name": "Eco temperature"
+      }
+    }
+  },
+  "issues": {
+    "no_data": {
+      "title": "No valid room data",
+      "description": "HeatConductor has had no valid data from any regulated room for several minutes and keeps the boiler off. Check thermostats, batteries and the connection to the access point."
+    },
+    "relay_unavailable": {
+      "title": "Boiler relay unavailable",
+      "description": "The configured boiler relay has been unavailable for several minutes. HeatConductor cannot switch the boiler."
+    },
+    "watchdog_unreachable": {
+      "title": "Relay watchdog unreachable",
+      "description": "Heartbeats to the relay watchdog have been failing for several minutes. The relay will switch the boiler off. Check the Shelly script and the URL."
+    }
+  },
+  "services": {
+    "set_vacation": {
+      "name": "Set vacation",
+      "description": "All rooms use the vacation temperature between start and end.",
+      "fields": {
+        "start": {
+          "name": "Start",
+          "description": "Empty = now."
+        },
+        "end": {
+          "name": "End"
+        },
+        "temperature": {
+          "name": "Temperature",
+          "description": "Overrides the vacation temperature from the options."
+        }
+      }
+    },
+    "clear_vacation": {
+      "name": "Clear vacation",
+      "description": "Ends a scheduled or running vacation."
+    },
+    "reset_learning": {
+      "name": "Reset learning",
+      "description": "Forgets learned values of one room or everything.",
+      "fields": {
+        "room": {
+          "name": "Room",
+          "description": "Room name. Empty = everything."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Heats a room to the boost temperature for a while.",
+      "fields": {
+        "duration": {
+          "name": "Duration"
+        },
+        "temperature": {
+          "name": "Temperature"
+        }
+      }
+    },
+    "clear_override": {
+      "name": "Back to automatic",
+      "description": "Ends boost and manual override of a room."
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "HeatConductor is not set up."
+    },
+    "vacation_order": {
+      "message": "The start of the vacation must be before its end."
+    },
+    "unknown_room": {
+      "message": "Unknown room: {room}"
     }
   }
 }

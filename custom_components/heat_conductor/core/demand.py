@@ -21,6 +21,10 @@ class RoomInput:
     targets: tuple[Reading, ...]
     valves: tuple[Reading, ...]
     windows_open: tuple[bool | None, ...]
+    # Target from room control; None = use the thermostats' own targets.
+    effective_target: float | None = None
+    # Strong sun on a room with large glass area: ignore the temperature deficit.
+    solar_active: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +71,8 @@ def evaluate_room(room: RoomInput, now: datetime, params: ControlParams) -> Room
 
     targets = [v for r in room.targets if (v := r.valid_value(now, age)) is not None]
     target = max(targets) if targets else None
+    if room.effective_target is not None:
+        target = room.effective_target
 
     valves = [v for r in room.valves if (v := r.valid_value(now, age)) is not None]
     valve = _mean([0.0 if v < params.valve_noise else v for v in valves])
@@ -95,7 +101,7 @@ def evaluate_room(room: RoomInput, now: datetime, params: ControlParams) -> Room
     components: list[float] = []
     if valve is not None:
         components.append(valve)
-    if deficit is not None and params.deficit_full_scale > 0:
+    if deficit is not None and params.deficit_full_scale > 0 and not room.solar_active:
         components.append(min(max(deficit / params.deficit_full_scale, 0.0), 1.0))
     if not components:
         return result(RoomStatus.STALE, None)
@@ -105,7 +111,9 @@ def evaluate_room(room: RoomInput, now: datetime, params: ControlParams) -> Room
     else:
         temperature_missing = len(trv_temps) < len(room.thermostat_temperatures)
     degraded = (
-        temperature_missing or len(targets) < len(room.targets) or len(valves) < len(room.valves)
+        temperature_missing
+        or (room.effective_target is None and len(targets) < len(room.targets))
+        or len(valves) < len(room.valves)
     )
     return result(RoomStatus.DEGRADED if degraded else RoomStatus.OK, max(components))
 

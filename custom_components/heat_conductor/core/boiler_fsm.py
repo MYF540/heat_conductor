@@ -31,6 +31,7 @@ class BoilerInputs:
     automation_enabled: bool
     actuator_active: bool
     relay_on: bool | None
+    forecast_outdoor: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,6 +156,11 @@ class BoilerController:
             inp.mode is not OperatingMode.COMFORT
             and inp.outdoor_smoothed is not None
             and inp.outdoor_smoothed >= p.heating_limit
+            and not (
+                p.use_forecast
+                and inp.forecast_outdoor is not None
+                and inp.forecast_outdoor < p.heating_limit - 1.0
+            )
         ):
             return self._stop(now, BoilerState.SUMMER, Reason.SUMMER_MODE)
 
@@ -163,6 +169,14 @@ class BoilerController:
 
         if self.is_on:
             self._demand_since = None
+            if (
+                p.residual_heat_stop
+                and demand.max_deficit is not None
+                and demand.max_deficit <= -p.residual_heat_margin
+                and total < p.start_threshold
+            ):
+                # Every room is above its target: let the stored heat do the rest.
+                return self._stop(now, BoilerState.OFF, Reason.RESIDUAL_HEAT)
             if total <= p.stop_threshold and not immediate:
                 return self._stop(now, BoilerState.OFF, Reason.DEMAND_SATISFIED)
             return self._decide(BoilerState.HEATING, Reason.DEMAND_CONTINUES)

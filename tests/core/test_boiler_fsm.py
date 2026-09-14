@@ -195,6 +195,44 @@ def test_commanded_switching_is_not_manual() -> None:
     assert following.state is BoilerState.HEATING
 
 
+def test_residual_heat_stops_when_all_rooms_above_target() -> None:
+    fsm = BoilerController(PARAMS)
+    fsm.step(inputs(minutes(0), demand(1.0, max_deficit=2.0)))
+    held = fsm.step(inputs(minutes(10), demand(0.2, max_deficit=-0.5)))
+    assert held.reason is Reason.MIN_RUNTIME
+    stopped = fsm.step(inputs(minutes(21), demand(0.2, max_deficit=-0.5)))
+    assert stopped.reason is Reason.RESIDUAL_HEAT
+    assert not stopped.request_heat
+
+
+def test_forecast_of_cold_weather_overrides_summer_mode() -> None:
+    fsm = BoilerController(PARAMS)
+    summer = BoilerInputs(
+        now=minutes(0),
+        demand=demand(1.0, max_deficit=2.0),
+        outdoor_smoothed=17.0,
+        flow_temperature=None,
+        mode=OperatingMode.AUTO,
+        automation_enabled=True,
+        actuator_active=False,
+        relay_on=None,
+        forecast_outdoor=17.0,
+    )
+    assert fsm.step(summer).state is BoilerState.SUMMER
+    cold = BoilerInputs(
+        now=minutes(1),
+        demand=demand(1.0, max_deficit=2.0),
+        outdoor_smoothed=17.0,
+        flow_temperature=None,
+        mode=OperatingMode.AUTO,
+        automation_enabled=True,
+        actuator_active=False,
+        relay_on=None,
+        forecast_outdoor=8.0,
+    )
+    assert fsm.step(cold).request_heat
+
+
 def test_leaving_observation_adopts_relay_without_pause() -> None:
     fsm = BoilerController(PARAMS)
     assert fsm.step(inputs(minutes(0), demand(1.0, max_deficit=2.0))).request_heat

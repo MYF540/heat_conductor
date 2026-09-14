@@ -16,7 +16,7 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC"]
-ignore = ["E501"]
+ignore = ["E501", "RUF012"]
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true

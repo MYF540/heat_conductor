@@ -19,14 +19,18 @@ from homeassistant.helpers import selector
 import voluptuous as vol
 
 from .const import (
+    ALL_DEFAULTS,
     CONF_BOILER_SWITCH,
     CONF_BURNER_FLOW_THRESHOLD,
     CONF_BURNER_MAX_POWER,
     CONF_BURNER_SENSOR,
     CONF_CALORIFIC_VALUE,
     CONF_CLIMATES,
+    CONF_COMPENSATION,
     CONF_CONDENSING_RETURN_LIMIT,
     CONF_DEFICIT_FULL_SCALE,
+    CONF_DUTY_CYCLE,
+    CONF_FLOW_SETPOINT,
     CONF_FLOW_TEMPERATURE,
     CONF_FROST_LIMIT,
     CONF_GAS_FLOW,
@@ -40,14 +44,19 @@ from .const import (
     CONF_MIN_RUN,
     CONF_OUTDOOR_SENSORS,
     CONF_OUTDOOR_SMOOTHING,
+    CONF_PRESENCE,
     CONF_RETURN_TEMPERATURE,
     CONF_ROOM_KIND,
     CONF_ROOM_TEMPERATURE,
+    CONF_SCHEDULE,
+    CONF_SOLAR_GAIN,
+    CONF_SOLAR_POWER,
     CONF_STALE_AFTER,
     CONF_START_CONFIRM,
     CONF_START_THRESHOLD,
     CONF_STOP_THRESHOLD,
     CONF_VALVES,
+    CONF_WATCHDOG_URL,
     CONF_WEATHER,
     CONF_WEIGHT,
     CONF_WINDOWS,
@@ -58,6 +67,7 @@ from .const import (
     SUBENTRY_ROOM,
 )
 from .core.models import RoomKind
+from .params import PARAMS
 
 ENTITY_KEYS = (
     CONF_BOILER_SWITCH,
@@ -68,6 +78,11 @@ ENTITY_KEYS = (
     CONF_BURNER_SENSOR,
     CONF_OUTDOOR_SENSORS,
     CONF_WEATHER,
+    CONF_WATCHDOG_URL,
+    CONF_PRESENCE,
+    CONF_DUTY_CYCLE,
+    CONF_FLOW_SETPOINT,
+    CONF_SOLAR_POWER,
 )
 
 
@@ -103,6 +118,15 @@ ENTITIES_SCHEMA = vol.Schema(
         vol.Optional(CONF_GAS_METER): _entity("sensor"),
         vol.Optional(CONF_GAS_FLOW): _entity("sensor"),
         vol.Optional(CONF_BURNER_SENSOR): _entity("binary_sensor"),
+        vol.Optional(CONF_WATCHDOG_URL): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
+        ),
+        vol.Optional(CONF_PRESENCE, default=[]): _entity(
+            ["person", "device_tracker", "binary_sensor", "input_boolean"], multiple=True
+        ),
+        vol.Optional(CONF_DUTY_CYCLE): _entity("sensor"),
+        vol.Optional(CONF_FLOW_SETPOINT): _entity("sensor", SensorDeviceClass.TEMPERATURE),
+        vol.Optional(CONF_SOLAR_POWER): _entity("sensor", SensorDeviceClass.POWER),
     }
 )
 
@@ -137,6 +161,22 @@ ENERGY_SCHEMA = vol.Schema(
 )
 
 
+def _group_schema(group: str) -> vol.Schema:
+    """Options form generated from the parameter metadata."""
+    fields: dict[Any, Any] = {}
+    for meta in PARAMS:
+        if meta.group != group:
+            continue
+        if meta.boolean:
+            fields[vol.Required(meta.key)] = selector.BooleanSelector()
+        else:
+            assert meta.minimum is not None and meta.maximum is not None and meta.step is not None
+            fields[vol.Required(meta.key)] = _number(
+                meta.minimum, meta.maximum, meta.step, meta.unit
+            )
+    return vol.Schema(fields)
+
+
 def _validate_entities(user_input: dict[str, Any]) -> dict[str, str]:
     errors: dict[str, str] = {}
     if not user_input.get(CONF_OUTDOOR_SENSORS) and not user_input.get(CONF_WEATHER):
@@ -169,7 +209,7 @@ class HeatConductorConfigFlow(ConfigFlow, domain=DOMAIN):
             errors = _validate_entities(user_input)
             if not errors:
                 name = user_input.pop(CONF_NAME)
-                options = _merge_entities({**PARAMETER_DEFAULTS, **ENERGY_DEFAULTS}, user_input)
+                options = _merge_entities(dict(ALL_DEFAULTS), user_input)
                 return self.async_create_entry(title=name, data={}, options=options)
 
         return self.async_show_form(
@@ -199,7 +239,8 @@ class HeatConductorOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Choose what to edit."""
         return self.async_show_menu(
-            step_id="init", menu_options=["entities", "parameters", "energy"]
+            step_id="init",
+            menu_options=["entities", "parameters", "energy", "room_control", "learning"],
         )
 
     async def async_step_entities(
@@ -243,6 +284,27 @@ class HeatConductorOptionsFlow(OptionsFlow):
             data_schema=self.add_suggested_values_to_schema(ENERGY_SCHEMA, current),
         )
 
+    async def async_step_room_control(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Edit room control parameters."""
+        return await self._group_step("room_control", user_input)
+
+    async def async_step_learning(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Edit learning and anticipation parameters."""
+        return await self._group_step("learning", user_input)
+
+    async def _group_step(self, group: str, user_input: dict[str, Any] | None) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(data={**self.config_entry.options, **user_input})
+        current = {**ALL_DEFAULTS, **self.config_entry.options}
+        return self.async_show_form(
+            step_id=group,
+            data_schema=self.add_suggested_values_to_schema(_group_schema(group), current),
+        )
+
 
 ROOM_SCHEMA = vol.Schema(
     {
@@ -258,6 +320,9 @@ ROOM_SCHEMA = vol.Schema(
         vol.Optional(CONF_VALVES, default=[]): _entity("sensor", multiple=True),
         vol.Optional(CONF_ROOM_TEMPERATURE): _entity("sensor", SensorDeviceClass.TEMPERATURE),
         vol.Optional(CONF_WINDOWS, default=[]): _entity("binary_sensor", multiple=True),
+        vol.Optional(CONF_SCHEDULE): _entity("schedule"),
+        vol.Required(CONF_COMPENSATION, default=True): selector.BooleanSelector(),
+        vol.Required(CONF_SOLAR_GAIN, default=False): selector.BooleanSelector(),
         vol.Required(CONF_WEIGHT, default=1.0): _number(0.1, 10, 0.1),
     }
 )
