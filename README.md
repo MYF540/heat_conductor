@@ -26,14 +26,23 @@ gegen Takten, Sicherheitsabschaltung und nachvollziehbaren Entscheidungen.
 Die Modi *Komfort* (ignoriert die Heizgrenze), *Frostschutz* und *Aus* wirken bereits;
 *Eco*, *Abwesend* und *Urlaub* bekommen ihre Wirkung mit der Raumsteuerung (Phase 4).
 
-## Installation (Entwicklungsphase)
+## Installation
 
-1. Ordner `custom_components/heat_conductor` nach `/config/custom_components/` kopieren
-   (z. B. mit der Samba- oder SSH-App).
-2. Home Assistant neu starten.
-3. *Einstellungen → Geräte & Dienste → Integration hinzufügen → HeatConductor*.
+### Über HACS (empfohlen)
 
-Später: Installation über HACS als benutzerdefiniertes Repository.
+1. *HACS → ⋮ (oben rechts) → Benutzerdefinierte Repositories*
+2. Repository `https://github.com/MYF540/heat_conductor`, Typ **Integration**, hinzufügen.
+3. *HeatConductor* in HACS öffnen → **Herunterladen**.
+4. Home Assistant neu starten.
+5. *Einstellungen → Geräte & Dienste → Integration hinzufügen → HeatConductor*.
+
+Updates erscheinen danach in HACS.
+
+### Manuell
+
+Ordner `custom_components/heat_conductor` nach `/config/custom_components/` kopieren
+(z. B. mit der Samba- oder SSH-App), Home Assistant neu starten und die Integration
+wie oben hinzufügen.
 
 ## Einrichtung
 

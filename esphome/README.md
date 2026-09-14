@@ -63,9 +63,32 @@ Die Pinbelegung des ADuM1201 bitte mit dem Datenblatt bzw. der Modulbeschriftung
   Schelle fixieren, darüber isolieren. Anlegefühler messen einige Kelvin träger und
   niedriger als die Wassertemperatur; für Spreizung und Brennerzyklen ist das ausreichend.
 
+## ESPHome Device Builder in Home Assistant
+
+**Variante 1 – Komponente direkt aus GitHub (empfohlen):** Nur `heizung-esp.yaml` nach
+`/config/esphome/` kopieren (oder im Builder als neues Gerät einfügen) und den Block
+`external_components` so ändern:
+
+```yaml
+external_components:
+  - source:
+      type: git
+      url: https://github.com/MYF540/heat_conductor
+      ref: main
+      path: esphome/components
+    components: [vaillant_x6]
+    refresh: 1d
+```
+
+**Variante 2 – lokal:** Ordner `components/vaillant_x6` zusätzlich nach
+`/config/esphome/components/vaillant_x6/` kopieren; die YAML bleibt unverändert.
+
+Die Zugangsdaten gehören in die Secrets des Builders (oben rechts *Secrets*), Schlüssel
+siehe `secrets.yaml.example`.
+
 ## Inbetriebnahme
 
-1. `secrets.yaml.example` nach `secrets.yaml` kopieren und ausfüllen.
+1. `secrets.yaml.example` nach `secrets.yaml` kopieren und ausfüllen (bzw. Secrets im Builder).
 2. Erstes Flashen per USB (z. B. ESPHome Builder in Home Assistant oder
    `esphome run heizung-esp.yaml`). Die Platzhalter-Adressen der DS18B20 sind noch leer.
 3. Im Log listet der 1-Wire-Bus die gefundenen Adressen (`0x…`). Einen Fühler kurz in der
