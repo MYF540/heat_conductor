@@ -133,7 +133,7 @@ sensor:
 Den Zählerstand an den echten Zähler anzugleichen ist nicht nötig: HeatConductor wertet nur
 die Differenzen aus. Brennwert und Zustandszahl stehen auf der Gasabrechnung.
 
-Kessel-ESP mit Vor-/Rücklauf und Vaillant-X6-Diagnose: siehe [esphome/README.md](esphome/README.md).
+Kessel-ESP mit Vor-/Rücklauf: siehe [esphome/README.md](esphome/README.md). Vaillant-X6-Diagnose: eigenes Projekt [esphome-vaillant-x6](https://github.com/MYF540/esphome-vaillant-x6).
 
 ### Energie-Dashboard
 

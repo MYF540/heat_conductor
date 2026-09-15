@@ -73,7 +73,7 @@ Die HmIP-Integration liefert je Thermostat eine Climate-Entity (Soll-/Ist-Temper
 | Außentemperatur | mehrere Zigbee-Sensoren, Wetter-Integration als Fallback |
 | Vor-/Rücklauf | ESPHome |
 | Gas | ESPHome-Impulszähler |
-| Kesseldiagnose | ESPHome über X6 (Kompatibilität zu prüfen) |
+| Kesseldiagnose | ESPHome über X6, eigenes Projekt [esphome-vaillant-x6](https://github.com/MYF540/esphome-vaillant-x6) (Testkessel antwortet bisher nicht) |
 | HmIP-Funklast | Duty-Cycle-Sensor des Access Points |
 | Sonneneinstrahlung (Proxy) | Leistung einer PV-Anlage (optional) |
 | Anwesenheit | HA `person`-Entities |
@@ -109,7 +109,7 @@ Die HmIP-Integration liefert je Thermostat eine Climate-Entity (Soll-/Ist-Temper
 | Relais | **Shelly 1 Gen3/Gen4** oder **Shelly Pro 1**: potentialfreier Kontakt, 230 V geeignet, Gen2+ für Skripte (**keine PM-Variante**) |
 | Einbau | Eigene Abzweigdose **außerhalb** des Kesselgehäuses, Einschaltzustand „aus“ |
 | Notbetrieb | **Handschalter parallel** zum Relaiskontakt (manuelles Heizen bei Defekt) |
-| Diagnose | ESPHome-Modul an X6, nach dem Vorbild von `jayme-github/esphome_vaillant`, **nur lesend** |
+| Diagnose | ESPHome-Modul an X6, **nur lesend**; ausgegliedert in das Projekt [esphome-vaillant-x6](https://github.com/MYF540/esphome-vaillant-x6) |
 | Montage | **Elektrofachkraft** (230 V an der Kesselplatine) |
 
 ### 3.3 Inbetriebnahme-Checkliste
@@ -379,6 +379,7 @@ hacs.json  README.md  PLAN.md  LICENSE
 | 2026-09-14 | Raumsteuerung nach Installation standardmäßig aus (eigener Schalter) |
 | 2026-09-14 | Panel als abhängigkeitsfreie Web-Component ohne Build (statt Lit/TypeScript): kein Node-Build, offline lauffähig |
 | 2026-09-14 | Was-wäre-wenn für alle Nutzer lesend erlaubt, bis 168 h; Änderungsprotokoll hält die letzten 500 Einträge |
+| 2026-09-15 | X6-Anbindung in eigenes Projekt `esphome-vaillant-x6` ausgegliedert (Kessel antwortet bisher nicht, Tests dort dokumentiert); HeatConductor-ESP nur noch mit Vor-/Rücklauf |
 
 ---
 

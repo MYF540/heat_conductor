@@ -2,9 +2,10 @@
 #
 # ESP32-S3-DevKitC-1 am Heizkessel:
 #   - Vorlauf- und Rücklauftemperatur mit 2× DS18B20 (Anlegefühler, 1-Wire)
-#   - Vaillant X6-Diagnoseschnittstelle, NUR LESEND, galvanisch getrennt
 #
 # Verdrahtung: siehe README.md und docs/verdrahtung.svg in diesem Ordner.
+# Kesseldaten über die Vaillant-X6-Schnittstelle: eigenes Projekt
+# https://github.com/MYF540/esphome-vaillant-x6
 #
 # Erstinbetriebnahme der DS18B20:
 #   1. Mit den Platzhalter-Adressen flashen
@@ -18,8 +19,6 @@ substitutions:
   # DS18B20-Adressen nach der Erstinbetriebnahme eintragen
   address_flow: "0x0000000000000000"
   address_return: "0x0000000000000000"
-  # X6 arbeitet mit 9600 Baud (auch ältere Kessel, siehe request_byte)
-  x6_baud_rate: "9600"
 
 esphome:
   name: ${name}
@@ -31,12 +30,6 @@ esp32:
   variant: esp32s3
   framework:
     type: esp-idf
-
-external_components:
-  - source:
-      type: local
-      path: components
-    components: [vaillant_x6]
 
 logger:
 
@@ -64,26 +57,6 @@ one_wire:
   - platform: gpio
     pin: GPIO4
     id: pipe_bus
-
-# ---------------------------------------------------------------------------
-# X6-Schnittstelle über Digitalisolator (UART1: TX GPIO17, RX GPIO18)
-# ---------------------------------------------------------------------------
-uart:
-  id: x6_uart
-  tx_pin: GPIO17
-  rx_pin: GPIO18
-  baud_rate: ${x6_baud_rate}
-  data_bits: 8
-  parity: NONE
-  stop_bits: 1
-
-vaillant_x6:
-  id: kessel_x6
-  uart_id: x6_uart
-  update_interval: 15s
-  # auto: probiert 0x05 (ältere Kessel, z. B. VKO/VKK) und 0x00 (neuere) und behält,
-  # was antwortet. Fest einstellbar mit z. B. request_byte: 0x05
-  request_byte: auto
 
 # ---------------------------------------------------------------------------
 # Kalibrierung der Anlegefühler: korrigiert = roh × Faktor + Offset
@@ -183,24 +156,6 @@ sensor:
           const float offset = id(return_cal_offset).has_state() ? id(return_cal_offset).state : 0.0f;
           return x * factor + offset;
 
-  # --- Werte aus der Kesselelektronik (X6) ---
-  - platform: vaillant_x6
-    vaillant_x6_id: kessel_x6
-    flow_temperature:
-      name: "Kessel Vorlauf"
-    flow_temperature_target:
-      name: "Kessel Vorlauf Soll"
-    flow_temperature_controller:
-      name: "Regler Vorlauf Soll"
-    return_temperature:
-      name: "Kessel Rücklauf"
-    outdoor_temperature:
-      name: "Kessel Außentemperatur"
-    remaining_burner_lock:
-      name: "Brennsperrzeit"
-    errors:
-      name: "X6 Übertragungsfehler"
-
   # --- Diagnose ---
   - platform: template
     name: "Spreizung"
@@ -222,18 +177,6 @@ sensor:
     entity_category: diagnostic
 
 binary_sensor:
-  - platform: vaillant_x6
-    vaillant_x6_id: kessel_x6
-    burner:
-      name: "Brenner"
-    flame:
-      name: "Flamme"
-    pump:
-      name: "Pumpe"
-    winter_mode:
-      name: "Winterbetrieb"
-    connected:
-      name: "X6 Verbindung"
   - platform: status
     name: "Status"
 
