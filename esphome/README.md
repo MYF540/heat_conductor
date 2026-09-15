@@ -94,10 +94,10 @@ siehe `secrets.yaml.example`.
 3. Im Log listet der 1-Wire-Bus die gefundenen Adressen (`0x…`). Einen Fühler kurz in der
    Hand erwärmen, um Vorlauf und Rücklauf zuzuordnen.
 4. Adressen unter `substitutions` (`address_flow`, `address_return`) eintragen, erneut flashen.
-X6„X6 Verbindung“ muss `an` sein, „X6 Übertragungsfehler“ sollte
-   nicht stetig steigen. Falls keine Antworten kommen: `x6_baud_rate` auf `2400` stellen
-   (ältere Geräte) und RX/TX-Zuordnung prüfen. Mit `logger: level: VERBOSE` werden die
-   gesendeten Pakete protokolliert.
+5. **X6 prüfen:** Der Sensor „X6 Verbindung“ muss `an` sein, im Log steht dann
+   „Boiler answers with request byte 0x..“. Kommen keine Antworten: RX/TX-Zuordnung prüfen
+   und den Loopback-Test machen (VOB mit VIA brücken, der ESP muss seine Anfrage
+   zurücklesen). Mit `logger: level: VERBOSE` werden die gesendeten Pakete protokolliert.
 6. Nicht jede Adresse wird von jedem Kesselmodell beantwortet. Werte, die dauerhaft keine
    Antwort liefern, in der YAML auskommentieren.
 7. **Fühler kalibrieren** (siehe unten).
