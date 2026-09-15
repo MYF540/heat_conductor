@@ -18,7 +18,7 @@ substitutions:
   # DS18B20-Adressen nach der Erstinbetriebnahme eintragen
   address_flow: "0x0000000000000000"
   address_return: "0x0000000000000000"
-  # 9600 ist bei den meisten Vaillant-Geräten korrekt, ältere nutzen teils 2400
+  # X6 arbeitet mit 9600 Baud (auch ältere Kessel, siehe request_byte)
   x6_baud_rate: "9600"
 
 esphome:
@@ -81,6 +81,9 @@ vaillant_x6:
   id: kessel_x6
   uart_id: x6_uart
   update_interval: 15s
+  # auto: probiert 0x05 (ältere Kessel, z. B. VKO/VKK) und 0x00 (neuere) und behält,
+  # was antwortet. Fest einstellbar mit z. B. request_byte: 0x05
+  request_byte: auto
 
 # ---------------------------------------------------------------------------
 # Kalibrierung der Anlegefühler: korrigiert = roh × Faktor + Offset
@@ -191,6 +194,8 @@ sensor:
       name: "Regler Vorlauf Soll"
     return_temperature:
       name: "Kessel Rücklauf"
+    outdoor_temperature:
+      name: "Kessel Außentemperatur"
     remaining_burner_lock:
       name: "Brennsperrzeit"
     errors:
@@ -221,6 +226,8 @@ binary_sensor:
     vaillant_x6_id: kessel_x6
     burner:
       name: "Brenner"
+    flame:
+      name: "Flamme"
     pump:
       name: "Pumpe"
     winter_mode:

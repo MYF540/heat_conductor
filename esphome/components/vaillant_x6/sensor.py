@@ -24,6 +24,7 @@ TEMPERATURES = {
     "flow_temperature_target": 0x39,  # Vorlauf soll (Kessel)
     "flow_temperature_controller": 0x25,  # Vorlauf soll vom Regler (7-8-9)
     "return_temperature": 0x98,  # Rücklauf ist
+    "outdoor_temperature": 0x6A,  # Außenfühler am Kessel (ältere Geräte)
 }
 MINUTES = {
     "remaining_burner_lock": 0x38,  # verbleibende Brennsperrzeit

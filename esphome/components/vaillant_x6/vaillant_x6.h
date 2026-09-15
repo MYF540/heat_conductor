@@ -42,6 +42,10 @@ class VaillantX6 : public PollingComponent, public uart::UARTDevice {
   void set_error_sensor(sensor::Sensor *sensor) { this->error_sensor_ = sensor; }
   void set_response_timeout(uint32_t ms) { this->response_timeout_ = ms; }
   void set_request_gap(uint32_t ms) { this->request_gap_ = ms; }
+  void set_request_byte(uint8_t value, bool automatic) {
+    this->request_byte_ = value;
+    this->auto_request_byte_ = automatic;
+  }
 
   /// Checksum used by the X6 protocol for requests and responses.
   static uint8_t checksum(const uint8_t *data, size_t length);
@@ -56,6 +60,7 @@ class VaillantX6 : public PollingComponent, public uart::UARTDevice {
   void handle_response_(size_t length);
   void finish_request_(bool ok);
   void drain_rx_();
+  void update_request_byte_();
 
   std::vector<Request> requests_;
   State state_{State::IDLE};
@@ -67,6 +72,10 @@ class VaillantX6 : public PollingComponent, public uart::UARTDevice {
   uint32_t errors_{0};
   uint32_t response_timeout_{500};
   uint32_t request_gap_{100};
+  uint8_t request_byte_{0x05};
+  bool auto_request_byte_{true};
+  bool request_byte_detected_{false};
+  uint8_t failed_cycles_{0};
 
   binary_sensor::BinarySensor *connected_sensor_{nullptr};
   sensor::Sensor *error_sensor_{nullptr};

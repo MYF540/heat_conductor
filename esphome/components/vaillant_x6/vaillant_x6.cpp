@@ -11,7 +11,8 @@ namespace vaillant_x6 {
 static const char *const TAG = "vaillant_x6";
 
 // Protocol (reverse engineered, see README):
-//   request:  07 00 00 00 <address> 00 <checksum>
+//   request:  07 00 00 00 <address> <request byte> <checksum>
+//             request byte: 0x05 on older boilers (e.g. VKO/VKK), 0x00 on newer ones
 //   response: <length> <status> <data...> <checksum>
 // <length> counts the whole packet. Temperatures are big-endian int16 / 16.
 static const uint8_t REQUEST_PREFIX[] = {0x07, 0x00, 0x00, 0x00};
@@ -48,6 +49,8 @@ void VaillantX6::dump_config() {
   ESP_LOGCONFIG(TAG, "  Requests per cycle: %u", static_cast<unsigned>(this->requests_.size()));
   ESP_LOGCONFIG(TAG, "  Response timeout: %" PRIu32 " ms", this->response_timeout_);
   ESP_LOGCONFIG(TAG, "  Request gap: %" PRIu32 " ms", this->request_gap_);
+  ESP_LOGCONFIG(TAG, "  Request byte: 0x%02X%s", this->request_byte_,
+                this->auto_request_byte_ ? " (auto)" : "");
   LOG_UPDATE_INTERVAL(this);
 }
 
@@ -94,7 +97,7 @@ void VaillantX6::loop() {
         }
       }
       if (millis() - this->timestamp_ > this->response_timeout_) {
-        ESP_LOGW(TAG, "Address 0x%02X: no complete response (%u bytes)", this->requests_[this->index_].address,
+        ESP_LOGD(TAG, "Address 0x%02X: no complete response (%u bytes)", this->requests_[this->index_].address,
                  static_cast<unsigned>(this->received_));
         this->finish_request_(false);
       }
@@ -110,7 +113,7 @@ void VaillantX6::send_request_() {
     packet[i] = REQUEST_PREFIX[i];
   }
   packet[4] = request.address;
-  packet[5] = 0x00;
+  packet[5] = this->request_byte_;
   packet[6] = checksum(packet, REQUEST_LENGTH - 1);
 
   this->drain_rx_();
@@ -183,11 +186,38 @@ void VaillantX6::finish_request_(bool ok) {
   }
 
   this->state_ = State::IDLE;
+  this->update_request_byte_();
   if (this->connected_sensor_ != nullptr) {
     this->connected_sensor_->publish_state(this->cycle_ok_);
   }
   if (this->error_sensor_ != nullptr) {
     this->error_sensor_->publish_state(this->errors_);
+  }
+}
+
+void VaillantX6::update_request_byte_() {
+  if (this->cycle_ok_) {
+    this->failed_cycles_ = 0;
+    if (this->auto_request_byte_ && !this->request_byte_detected_) {
+      this->request_byte_detected_ = true;
+      ESP_LOGI(TAG, "Boiler answers with request byte 0x%02X", this->request_byte_);
+    }
+    return;
+  }
+  if (this->failed_cycles_ < 255) {
+    this->failed_cycles_++;
+  }
+  ESP_LOGW(TAG, "No valid response in this cycle (request byte 0x%02X)", this->request_byte_);
+  if (!this->auto_request_byte_) {
+    return;
+  }
+  // Before detection try the other variant after every silent cycle; after detection
+  // only when the boiler has been silent for a while (e.g. it was switched off).
+  if (!this->request_byte_detected_ || this->failed_cycles_ >= 10) {
+    this->request_byte_detected_ = false;
+    this->failed_cycles_ = 0;
+    this->request_byte_ = this->request_byte_ == 0x05 ? 0x00 : 0x05;
+    ESP_LOGI(TAG, "Trying request byte 0x%02X", this->request_byte_);
   }
 }
 

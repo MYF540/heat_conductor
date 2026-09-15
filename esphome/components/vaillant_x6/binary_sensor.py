@@ -16,6 +16,7 @@ CONF_CONNECTED = "connected"
 
 STATES = {
     "burner": (0x0D, DEVICE_CLASS_HEAT),  # Brenner an
+    "flame": (0x05, DEVICE_CLASS_HEAT),  # Flammsignal (ältere Geräte)
     "pump": (0x44, DEVICE_CLASS_RUNNING),  # Pumpe an
     "winter_mode": (0x08, None),  # Winterbetrieb (Heizung freigegeben)
 }

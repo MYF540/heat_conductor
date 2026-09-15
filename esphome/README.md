@@ -94,7 +94,7 @@ siehe `secrets.yaml.example`.
 3. Im Log listet der 1-Wire-Bus die gefundenen Adressen (`0x…`). Einen Fühler kurz in der
    Hand erwärmen, um Vorlauf und Rücklauf zuzuordnen.
 4. Adressen unter `substitutions` (`address_flow`, `address_return`) eintragen, erneut flashen.
-5. **X6 prüfen:** Der Sensor „X6 Verbindung“ muss `an` sein, „X6 Übertragungsfehler“ sollte
+X6„X6 Verbindung“ muss `an` sein, „X6 Übertragungsfehler“ sollte
    nicht stetig steigen. Falls keine Antworten kommen: `x6_baud_rate` auf `2400` stellen
    (ältere Geräte) und RX/TX-Zuordnung prüfen. Mit `logger: level: VERBOSE` werden die
    gesendeten Pakete protokolliert.
@@ -171,8 +171,9 @@ Reverse-engineert von der Community. Die Komponente ist eine eigenständige, nic
 blockierende Neuimplementierung; Adressen und Prüfsumme stammen aus
 [esphome_vaillant](https://github.com/jayme-github/esphome_vaillant).
 
-- UART 9600 Baud (teils 2400), 8N1, TTL 5 V
-- Anfrage: `07 00 00 00 <Adresse> 00 <Prüfsumme>`
+- UART 9600 Baud, 8N1, TTL 5 V
+- Anfrage: `07 00 00 00 <Adresse> <Anfragebyte> <Prüfsumme>`, Anfragebyte **0x05** bei älteren
+  Kesseln (z. B. VKO/VKK mit Einbauregler), **0x00** bei neueren. `request_byte: auto` probiert beide.
 - Antwort: `<Länge> <Status> <Daten…> <Prüfsumme>`, Temperaturen als int16 big-endian / 16
 - Prüfsumme: für jedes Byte `sum = (sum & 0x80) ? ((sum << 1) | 1) ^ 0x18 : sum << 1; sum ^= byte`
 
@@ -181,11 +182,15 @@ blockierende Neuimplementierung; Adressen und Prüfsumme stammen aus
 | 0x18 | Vorlauf ist | `flow_temperature` |
 | 0x39 | Vorlauf soll (Kessel) | `flow_temperature_target` |
 | 0x25 | Vorlauf soll vom Regler (7-8-9) | `flow_temperature_controller` |
-| 0x98 | Rücklauf ist | `return_temperature` |
+| 0x98 | Rücklauf ist (neuere Geräte) | `return_temperature` |
+| 0x6A | Außentemperatur (Fühler am Kessel, ältere Geräte) | `outdoor_temperature` |
+| 0x05 | Flammsignal (ältere Geräte) | `flame` |
 | 0x38 | verbleibende Brennsperrzeit (min) | `remaining_burner_lock` |
 | 0x0D | Brenner an | `burner` |
 | 0x44 | Pumpe an | `pump` |
 | 0x08 | Winterbetrieb | `winter_mode` |
+
+Das Anfragebyte 0x05 und die Parameter älterer Kessel stammen aus [haniham/HeizungESP8266](https://github.com/haniham/HeizungESP8266) (VKO 246 mit VRC 420).
 
 Weitere Quellen: [martin3000/ESPhome](https://github.com/martin3000/ESPhome),
 [FHEM-Forum: Vaillant X6 über ESP8266](https://forum.fhem.de/index.php?topic=43573.0),
