@@ -970,7 +970,7 @@ class HeatConductorPanel extends HTMLElement {
     }).join("");
     const status = [
       [this.t("daysObserved"), `${p.days_observed} / ${p.min_days}`],
-      ["", p.ready ? this.t("scheduleReady") : this.t("scheduleNotReady")],
+      [this.t("status"), p.ready ? this.t("scheduleReady") : this.t("scheduleNotReady")],
       [this.t("learnedScheduleState"), state ? (state.enabled ? this.t("on") : this.t("off")) : "–"],
       [this.t("learnedScheduleNow"), state && state.comfort_now !== null && state.comfort_now !== undefined
         ? (state.comfort_now ? this.t("comfortNow") : this.t("ecoNow")) : "–"],
