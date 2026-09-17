@@ -50,6 +50,7 @@
           "parameters": "Regelparameter",
           "energy": "Energie und Gas",
           "room_control": "Raumsteuerung",
+          "usage": "Nutzungserkennung",
           "learning": "Lernen und Vorausschau"
         }
       },
@@ -154,6 +155,18 @@
         },
         "description": "HeatConductor schreibt nur an Thermostate, wenn der Schalter „Raumsteuerung“ eingeschaltet ist."
       },
+      "usage": {
+        "title": "Nutzungserkennung",
+        "description": "Ein Raum wird nur auf Komfort geheizt, solange er genutzt wird. Die Geräte je Raum stellst du in den Raumeinstellungen ein, der Schalter „Nutzungserkennung“ schaltet sie je Raum ein und aus.",
+        "data": {
+          "usage_hold": "Nachlaufzeit",
+          "usage_in_eco": "Nutzung hebt Absenkung auf"
+        },
+        "data_description": {
+          "usage_hold": "So lange gilt ein Raum nach der letzten Aktivität noch als genutzt.",
+          "usage_in_eco": "Ein genutzter Raum wird auch während einer Absenkphase auf Komforttemperatur geheizt."
+        }
+      },
       "learning": {
         "title": "Lernen und Vorausschau",
         "data": {
@@ -194,6 +207,7 @@
             "windows": "Fensterkontakte",
             "weight": "Gewichtung",
             "schedule": "Zeitplan",
+            "usage_entities": "Geräte für Nutzungserkennung",
             "compensation": "Mit Raumsensor korrigieren",
             "solar_gain": "Raum mit großen Sonnengewinnen"
           },
@@ -203,6 +217,7 @@
             "room_temperature": "Hat Vorrang vor der Temperatur des Thermostats.",
             "weight": "Anteil des Raums am Gesamtbedarf, z. B. nach Heizkörpergröße.",
             "schedule": "Zeitplan-Helfer: an = Komfort, aus = Eco. Ohne Zeitplan gilt Komfort.",
+            "usage_entities": "Fernseher, PC, Präsenzmelder o. Ä. Ist eines davon an, gilt der Raum als genutzt und wird auf Komfort geheizt, sonst auf Eco.",
             "compensation": "Passt den Thermostat-Sollwert um die Differenz zwischen Thermostat und Raumsensor an.",
             "solar_gain": "Nutzt die PV-Leistung als Maß für die Sonne."
           }
@@ -218,11 +233,13 @@
             "windows": "Fensterkontakte",
             "weight": "Gewichtung",
             "schedule": "Zeitplan",
+            "usage_entities": "Geräte für Nutzungserkennung",
             "compensation": "Mit Raumsensor korrigieren",
             "solar_gain": "Raum mit großen Sonnengewinnen"
           },
           "data_description": {
             "schedule": "Zeitplan-Helfer: an = Komfort, aus = Eco. Ohne Zeitplan gilt Komfort.",
+            "usage_entities": "Fernseher, PC, Präsenzmelder o. Ä. Ist eines davon an, gilt der Raum als genutzt und wird auf Komfort geheizt, sonst auf Eco.",
             "compensation": "Passt den Thermostat-Sollwert um die Differenz zwischen Thermostat und Raumsensor an.",
             "solar_gain": "Nutzt die PV-Leistung als Maß für die Sonne."
           }
@@ -261,6 +278,9 @@
       },
       "watchdog": {
         "name": "Relais-Watchdog"
+      },
+      "room_in_use": {
+        "name": "Raum genutzt"
       }
     },
     "select": {
@@ -408,6 +428,12 @@
       },
       "room_control": {
         "name": "Raumsteuerung"
+      },
+      "learned_schedule": {
+        "name": "Gelernter Zeitplan"
+      },
+      "usage_detection": {
+        "name": "Nutzungserkennung"
       }
     },
     "climate": {

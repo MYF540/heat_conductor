@@ -55,6 +55,7 @@ from .const import (
     CONF_START_CONFIRM,
     CONF_START_THRESHOLD,
     CONF_STOP_THRESHOLD,
+    CONF_USAGE_ENTITIES,
     CONF_VALVES,
     CONF_WATCHDOG_URL,
     CONF_WEATHER,
@@ -240,7 +241,14 @@ class HeatConductorOptionsFlow(OptionsFlow):
         """Choose what to edit."""
         return self.async_show_menu(
             step_id="init",
-            menu_options=["entities", "parameters", "energy", "room_control", "learning"],
+            menu_options=[
+                "entities",
+                "parameters",
+                "energy",
+                "room_control",
+                "usage",
+                "learning",
+            ],
         )
 
     async def async_step_entities(
@@ -290,6 +298,10 @@ class HeatConductorOptionsFlow(OptionsFlow):
         """Edit room control parameters."""
         return await self._group_step("room_control", user_input)
 
+    async def async_step_usage(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Edit usage based heating parameters."""
+        return await self._group_step("usage", user_input)
+
     async def async_step_learning(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -321,6 +333,10 @@ ROOM_SCHEMA = vol.Schema(
         vol.Optional(CONF_ROOM_TEMPERATURE): _entity("sensor", SensorDeviceClass.TEMPERATURE),
         vol.Optional(CONF_WINDOWS, default=[]): _entity("binary_sensor", multiple=True),
         vol.Optional(CONF_SCHEDULE): _entity("schedule"),
+        vol.Optional(CONF_USAGE_ENTITIES, default=[]): _entity(
+            ["binary_sensor", "media_player", "switch", "input_boolean", "light", "device_tracker"],
+            multiple=True,
+        ),
         vol.Required(CONF_COMPENSATION, default=True): selector.BooleanSelector(),
         vol.Required(CONF_SOLAR_GAIN, default=False): selector.BooleanSelector(),
         vol.Required(CONF_WEIGHT, default=1.0): _number(0.1, 10, 0.1),

@@ -13,6 +13,8 @@ from datetime import date, datetime, timedelta
 import math
 from typing import Any
 
+from .presence import PresenceLearner
+
 SAMPLE_INTERVAL = timedelta(minutes=5)
 HEAT_WINDOW_SAMPLES = 7  # 30 min
 COOL_WINDOW_SAMPLES = 13  # 60 min
@@ -468,6 +470,7 @@ class Learner:
         self.rooms: dict[str, RoomLearner] = {}
         self.boiler = BoilerCycleLearner()
         self.curve = HeatingCurveLearner()
+        self.presence = PresenceLearner()
 
     def room(self, room_id: str) -> RoomLearner:
         """Learner of a room (created on demand)."""
@@ -479,6 +482,7 @@ class Learner:
             self.rooms.clear()
             self.boiler = BoilerCycleLearner()
             self.curve = HeatingCurveLearner()
+            self.presence = PresenceLearner()
         else:
             self.rooms.pop(room_id, None)
 
@@ -492,6 +496,7 @@ class Learner:
             ],
             "boiler": self.boiler.summary(),
             "heating_curve": self.curve.summary(),
+            "presence": self.presence.summary(),
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -500,6 +505,7 @@ class Learner:
             "rooms": {room_id: learner.to_dict() for room_id, learner in self.rooms.items()},
             "boiler": self.boiler.to_dict(),
             "curve": self.curve.to_dict(),
+            "presence": self.presence.to_dict(),
         }
 
     @classmethod
@@ -514,4 +520,5 @@ class Learner:
         }
         learner.boiler = BoilerCycleLearner.from_dict(data.get("boiler"))
         learner.curve = HeatingCurveLearner.from_dict(data.get("curve"))
+        learner.presence = PresenceLearner.from_dict(data.get("presence"))
         return learner

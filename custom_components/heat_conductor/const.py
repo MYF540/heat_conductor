@@ -47,6 +47,7 @@ CONF_WEIGHT: Final = "weight"
 CONF_SCHEDULE: Final = "schedule"
 CONF_COMPENSATION: Final = "compensation"
 CONF_SOLAR_GAIN: Final = "solar_gain"
+CONF_USAGE_ENTITIES: Final = "usage_entities"
 
 # Control parameters (stored in options, in user-facing units)
 CONF_START_THRESHOLD: Final = "start_threshold"
@@ -127,6 +128,15 @@ ROOM_CONTROL_DEFAULTS: Final[dict[str, float | bool]] = {
     CONF_ADOPT_TRV_CHANGES: True,
 }
 
+# Usage based heating (stored in options)
+CONF_USAGE_HOLD: Final = "usage_hold"
+CONF_USAGE_IN_ECO: Final = "usage_in_eco"
+
+USAGE_DEFAULTS: Final[dict[str, float | bool]] = {
+    CONF_USAGE_HOLD: 30,  # min a room stays "in use" after the last activity
+    CONF_USAGE_IN_ECO: True,  # a used room is heated during setback periods too
+}
+
 # Learning and anticipation (stored in options)
 CONF_OPTIMUM_START: Final = "optimum_start"
 CONF_OPTIMUM_START_MAX_LEAD: Final = "optimum_start_max_lead"
@@ -146,5 +156,6 @@ ALL_DEFAULTS: Final[dict[str, float | bool]] = {
     **PARAMETER_DEFAULTS,
     **ENERGY_DEFAULTS,
     **ROOM_CONTROL_DEFAULTS,
+    **USAGE_DEFAULTS,
     **LEARNING_DEFAULTS,
 }

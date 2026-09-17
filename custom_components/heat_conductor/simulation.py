@@ -140,6 +140,7 @@ async def async_simulate(
         automation_enabled=True,
         actuator_active=False,
         room_control_enabled=False,
+        learned_schedule_enabled=False,
         vacation_active=False,
     )
     current_options = dict(coordinator.options)

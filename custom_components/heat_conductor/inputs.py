@@ -19,8 +19,11 @@ from homeassistant.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     PERCENTAGE,
     STATE_HOME,
+    STATE_IDLE,
+    STATE_NOT_HOME,
     STATE_OFF,
     STATE_ON,
+    STATE_STANDBY,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfPower,
@@ -50,6 +53,7 @@ from .const import (
     CONF_SCHEDULE,
     CONF_SOLAR_GAIN,
     CONF_SOLAR_POWER,
+    CONF_USAGE_ENTITIES,
     CONF_VALVES,
     CONF_WATCHDOG_URL,
     CONF_WEATHER,
@@ -73,6 +77,10 @@ _FLOW_FACTORS: dict[str | None, float] = {
     UnitOfVolumeFlowRate.LITERS_PER_HOUR: 0.001,
     UnitOfVolumeFlowRate.LITERS_PER_MINUTE: 0.06,
 }
+# A media player that is merely idle or on standby does not make a room "in use".
+_IDLE_STATES: frozenset[str] = frozenset(
+    {STATE_OFF, STATE_NOT_HOME, STATE_IDLE, STATE_STANDBY, STATE_UNAVAILABLE, STATE_UNKNOWN}
+)
 _POWER_FACTORS: dict[str | None, float] = {
     UnitOfPower.WATT: 0.001,
     UnitOfPower.KILO_WATT: 1.0,
@@ -94,6 +102,7 @@ class RoomConfig:
     schedule: str | None = None
     compensation: bool = True
     solar_gain: bool = False
+    usage_entities: tuple[str, ...] = field(default=())
 
     @classmethod
     def from_subentry(cls, subentry: ConfigSubentry) -> RoomConfig:
@@ -111,12 +120,13 @@ class RoomConfig:
             schedule=data.get(CONF_SCHEDULE) or None,
             compensation=bool(data.get(CONF_COMPENSATION, True)),
             solar_gain=bool(data.get(CONF_SOLAR_GAIN, False)),
+            usage_entities=tuple(data.get(CONF_USAGE_ENTITIES, [])),
         )
 
     @property
     def entity_ids(self) -> set[str]:
         """All entities this room depends on."""
-        ids = {*self.climates, *self.valves, *self.windows}
+        ids = {*self.climates, *self.valves, *self.windows, *self.usage_entities}
         for entity_id in (self.room_temperature, self.schedule):
             if entity_id:
                 ids.add(entity_id)
@@ -207,6 +217,7 @@ class ControlState:
     automation_enabled: bool
     actuator_active: bool
     room_control_enabled: bool
+    learned_schedule_enabled: bool
     vacation_active: bool
     forecast_6h: float | None = None
     forecast_12h: float | None = None
@@ -301,6 +312,13 @@ class InputReader:
             return MISSING
         return self._reading(state, _to_float(state.attributes.get(attribute)))
 
+    def activity(self, entity_ids: tuple[str, ...]) -> bool | None:
+        """Is the room in use? None if nothing is configured or known."""
+        known = [s for e in entity_ids if (s := self.state(e)) is not None]
+        if not known:
+            return None
+        return any(s.state not in _IDLE_STATES for s in known)
+
     def presence(self, entity_ids: tuple[str, ...]) -> bool | None:
         """Anyone at home? None if nothing is configured or known."""
         known = [s for e in entity_ids if (s := self.state(e)) is not None]
@@ -370,6 +388,7 @@ def build_snapshot(
                     ),
                     compensation=room.compensation,
                     solar_gain=room.solar_gain,
+                    activity=reader.activity(room.usage_entities),
                 )
             )
 
@@ -392,6 +411,7 @@ def build_snapshot(
         automation_enabled=control.automation_enabled,
         actuator_active=control.actuator_active,
         room_control_enabled=control.room_control_enabled,
+        learned_schedule_enabled=control.learned_schedule_enabled,
         vacation_active=control.vacation_active,
         present=reader.presence(config.presence),
         room_controls=tuple(controls),

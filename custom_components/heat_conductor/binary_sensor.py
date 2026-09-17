@@ -9,9 +9,9 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .coordinator import HeatConductorConfigEntry, HeatConductorCoordinator
+from .coordinator import HeatConductorConfigEntry, HeatConductorCoordinator, RoomConfig
 from .core.models import BoilerState, RoomKind, RoomStatus
-from .entity import HeatConductorEntity
+from .entity import HeatConductorEntity, RoomEntity
 
 
 async def async_setup_entry(
@@ -32,6 +32,39 @@ async def async_setup_entry(
     if coordinator.entities.watchdog_url is not None:
         entities.append(WatchdogSensor(coordinator))
     async_add_entities(entities)
+    for room in coordinator.rooms:
+        if room.kind is RoomKind.REGULATED and room.usage_entities:
+            async_add_entities(
+                [RoomInUseSensor(coordinator, room)], config_subentry_id=room.room_id
+            )
+
+
+class RoomInUseSensor(RoomEntity, BinarySensorEntity):
+    """On while the room counts as in use (activity or hold time)."""
+
+    _attr_device_class = BinarySensorDeviceClass.OCCUPANCY
+
+    def __init__(self, coordinator: HeatConductorCoordinator, room: RoomConfig) -> None:
+        super().__init__(coordinator, room, "room_in_use")
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return whether the room is in use."""
+        setpoint = (
+            self.coordinator.data.setpoint(self.room.room_id) if self.coordinator.data else None
+        )
+        return setpoint.room_active if setpoint else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Last detected activity and the configured entities."""
+        runtime = self.coordinator.engine.runtime(self.room.room_id)
+        last = runtime.last_active_at
+        return {
+            "last_activity": last.isoformat() if last else None,
+            "detection_enabled": runtime.usage_enabled,
+            "activity_entities": list(self.room.usage_entities),
+        }
 
 
 class HeatRequestSensor(HeatConductorEntity, BinarySensorEntity):

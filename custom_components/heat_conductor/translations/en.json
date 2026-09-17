@@ -50,6 +50,7 @@
           "parameters": "Control parameters",
           "energy": "Energy and gas",
           "room_control": "Room control",
+          "usage": "Usage detection",
           "learning": "Learning and anticipation"
         }
       },
@@ -154,6 +155,18 @@
         },
         "description": "HeatConductor only writes to thermostats when the switch \"Room control\" is on."
       },
+      "usage": {
+        "title": "Usage detection",
+        "description": "A room is only heated to comfort while it is in use. The devices per room are set in the room settings; the “Usage detection” switch turns it on and off per room.",
+        "data": {
+          "usage_hold": "Hold time",
+          "usage_in_eco": "Usage overrides setback"
+        },
+        "data_description": {
+          "usage_hold": "How long a room still counts as in use after the last activity.",
+          "usage_in_eco": "A room in use is heated to comfort temperature during setback periods as well."
+        }
+      },
       "learning": {
         "title": "Learning and anticipation",
         "data": {
@@ -194,6 +207,7 @@
             "windows": "Window contacts",
             "weight": "Weight",
             "schedule": "Schedule",
+            "usage_entities": "Devices for usage detection",
             "compensation": "Correct with room sensor",
             "solar_gain": "Room with large solar gains"
           },
@@ -203,6 +217,7 @@
             "room_temperature": "Preferred over the thermostat's own temperature.",
             "weight": "Share of this room in the total demand, e.g. by radiator size.",
             "schedule": "Schedule helper: on = comfort, off = eco. Without a schedule the room uses comfort.",
+            "usage_entities": "TV, PC, presence sensor and the like. While one of them is on, the room counts as in use and is heated to comfort, otherwise to eco.",
             "compensation": "Adjusts the thermostat setpoint by the difference between thermostat and room sensor.",
             "solar_gain": "Uses the PV power as a sun proxy."
           }
@@ -218,11 +233,13 @@
             "windows": "Window contacts",
             "weight": "Weight",
             "schedule": "Schedule",
+            "usage_entities": "Devices for usage detection",
             "compensation": "Correct with room sensor",
             "solar_gain": "Room with large solar gains"
           },
           "data_description": {
             "schedule": "Schedule helper: on = comfort, off = eco. Without a schedule the room uses comfort.",
+            "usage_entities": "TV, PC, presence sensor and the like. While one of them is on, the room counts as in use and is heated to comfort, otherwise to eco.",
             "compensation": "Adjusts the thermostat setpoint by the difference between thermostat and room sensor.",
             "solar_gain": "Uses the PV power as a sun proxy."
           }
@@ -261,6 +278,9 @@
       },
       "watchdog": {
         "name": "Relay watchdog"
+      },
+      "room_in_use": {
+        "name": "Room in use"
       }
     },
     "select": {
@@ -408,6 +428,12 @@
       },
       "room_control": {
         "name": "Room control"
+      },
+      "learned_schedule": {
+        "name": "Learned schedule"
+      },
+      "usage_detection": {
+        "name": "Usage detection"
       }
     },
     "climate": {

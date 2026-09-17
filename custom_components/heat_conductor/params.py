@@ -44,6 +44,8 @@ from .const import (
     CONF_START_CONFIRM,
     CONF_START_THRESHOLD,
     CONF_STOP_THRESHOLD,
+    CONF_USAGE_HOLD,
+    CONF_USAGE_IN_ECO,
     CONF_USE_FORECAST,
     CONF_VACATION_TEMP,
     CONF_WINDOW_TEMP,
@@ -129,6 +131,8 @@ PARAMS: tuple[ParamMeta, ...] = (
     _n(CONF_DUTY_CYCLE_LIMIT, "room_control", "%", 10, 100, 1),
     _b(CONF_FORCE_MANUAL_MODE, "room_control"),
     _b(CONF_ADOPT_TRV_CHANGES, "room_control"),
+    _n(CONF_USAGE_HOLD, "usage", "min", 0, 240, 5),
+    _b(CONF_USAGE_IN_ECO, "usage"),
     _b(CONF_OPTIMUM_START, "learning"),
     _n(CONF_OPTIMUM_START_MAX_LEAD, "learning", "min", 15, 480, 15),
     _b(CONF_RESIDUAL_HEAT, "learning"),
@@ -224,6 +228,8 @@ def setpoint_params(options: dict[str, Any]) -> SetpointParams:
         adopt_trv_changes=bool(_value(options, CONF_ADOPT_TRV_CHANGES)),
         optimum_start=bool(_value(options, CONF_OPTIMUM_START)),
         optimum_start_max_lead=timedelta(minutes=f(CONF_OPTIMUM_START_MAX_LEAD)),
+        usage_hold=timedelta(minutes=f(CONF_USAGE_HOLD)),
+        usage_in_eco=bool(_value(options, CONF_USAGE_IN_ECO)),
     )
 
 

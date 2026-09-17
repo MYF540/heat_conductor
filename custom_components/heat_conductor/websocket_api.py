@@ -109,6 +109,9 @@ def build_state(hass: HomeAssistant, coordinator: HeatConductorCoordinator) -> d
                 "comfort": runtime.comfort if runtime else None,
                 "eco": runtime.eco if runtime else None,
                 "enabled": runtime.enabled if runtime else None,
+                "usage_entities": len(room.usage_entities),
+                "usage_enabled": runtime.usage_enabled if runtime else None,
+                "in_use": setpoint.room_active if setpoint else None,
                 "temperature_entity": entity_id("sensor", f"{room.room_id}_room_temperature"),
                 "target_entity": entity_id("sensor", f"{room.room_id}_room_target"),
             }
@@ -160,6 +163,10 @@ def build_state(hass: HomeAssistant, coordinator: HeatConductorCoordinator) -> d
             },
             "energy": _jsonable(asdict(result.energy)),
             "room_control_active": result.room_control_active,
+            "learned_schedule": {
+                "enabled": coordinator.settings.learned_schedule_enabled,
+                "comfort_now": result.learned_schedule_on,
+            },
             "duty_cycle_ok": result.duty_cycle_ok,
             "solar_ratio": result.solar_ratio,
         }

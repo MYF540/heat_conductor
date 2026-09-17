@@ -139,7 +139,8 @@ Die HmIP-Integration liefert je Thermostat eine Climate-Entity (Soll-/Ist-Temper
 3. Boost (zeitlich begrenzt)
 4. Globaler Modus: Aus / Urlaub / Abwesend / Eco / Komfort
 5. Anwesenheit (niemand zu Hause → Eco)
-6. Zeitplan: **HA-Zeitplan-Helfer** je Raum (`an` = Komfort, `aus` = Absenkung)
+6. Zeitplan: **HA-Zeitplan-Helfer** je Raum (`an` = Komfort, `aus` = Absenkung); ohne eigenen Helfer optional der **gelernte Anwesenheits-Zeitplan**
+7. **Nutzungserkennung** (optional je Raum): genutzter Raum → Komfort, ungenutzter Raum → Absenkung. Nutzung erkennen Geräte des Raums (Fernseher, PC, Präsenzmelder), mit Nachlaufzeit
 
 **Solltemperaturen an die Thermostate schreiben**, mit diesen Regeln (wegen Batterie und HmIP-Duty-Cycle):
 
@@ -379,6 +380,7 @@ hacs.json  README.md  PLAN.md  LICENSE
 | 2026-09-14 | Raumsteuerung nach Installation standardmäßig aus (eigener Schalter) |
 | 2026-09-14 | Panel als abhängigkeitsfreie Web-Component ohne Build (statt Lit/TypeScript): kein Node-Build, offline lauffähig |
 | 2026-09-14 | Was-wäre-wenn für alle Nutzer lesend erlaubt, bis 168 h; Änderungsprotokoll hält die letzten 500 Einträge |
+| 2026-09-17 | Nutzungsbasiertes Heizen je Raum (Geräte als Nutzungsmelder, Komfort/Eco, je Raum abschaltbar) und gelernter Anwesenheits-Zeitplan als globaler Vorschlag |
 | 2026-09-15 | X6-Anbindung in eigenes Projekt `esphome-vaillant-x6` ausgegliedert (Kessel antwortet bisher nicht, Tests dort dokumentiert); HeatConductor-ESP nur noch mit Vor-/Rücklauf |
 
 ---

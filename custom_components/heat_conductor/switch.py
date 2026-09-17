@@ -11,8 +11,14 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .coordinator import HeatConductorConfigEntry, HeatConductorCoordinator, Settings
-from .entity import HeatConductorEntity
+from .coordinator import (
+    HeatConductorConfigEntry,
+    HeatConductorCoordinator,
+    RoomConfig,
+    Settings,
+)
+from .core.models import RoomKind
+from .entity import HeatConductorEntity, RoomEntity
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -40,6 +46,11 @@ SWITCHES: tuple[HeatConductorSwitchDescription, ...] = (
         value_fn=lambda s: s.room_control_enabled,
         set_fn=lambda c, v: c.async_set_room_control(v),
     ),
+    HeatConductorSwitchDescription(
+        key="learned_schedule",
+        value_fn=lambda s: s.learned_schedule_enabled,
+        set_fn=lambda c, v: c.async_set_learned_schedule(v),
+    ),
 )
 
 
@@ -51,6 +62,11 @@ async def async_setup_entry(
     """Set up switches."""
     coordinator = entry.runtime_data
     async_add_entities(SettingsSwitch(coordinator, d) for d in SWITCHES)
+    for room in coordinator.rooms:
+        if room.kind is RoomKind.REGULATED and room.usage_entities:
+            async_add_entities(
+                [RoomUsageSwitch(coordinator, room)], config_subentry_id=room.room_id
+            )
 
 
 class SettingsSwitch(HeatConductorEntity, SwitchEntity):
@@ -76,3 +92,30 @@ class SettingsSwitch(HeatConductorEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Disable the setting."""
         await self.entity_description.set_fn(self.coordinator, False)
+
+
+class RoomUsageSwitch(RoomEntity, SwitchEntity):
+    """Whether the room follows its activity sensors."""
+
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, coordinator: HeatConductorCoordinator, room: RoomConfig) -> None:
+        super().__init__(coordinator, room, "usage_detection")
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether usage detection is active for this room."""
+        return self.coordinator.engine.runtime(self.room.room_id).usage_enabled
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Show which entities report usage."""
+        return {"activity_entities": list(self.room.usage_entities)}
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Follow the activity sensors."""
+        await self.coordinator.async_set_room_usage(self.room.room_id, True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Ignore the activity sensors."""
+        await self.coordinator.async_set_room_usage(self.room.room_id, False)

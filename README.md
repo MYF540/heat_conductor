@@ -28,6 +28,8 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
 - Virtueller **Raumthermostat** je Raum (Soll, Ist, Boost, Komfort/Eco, Aus)
 - Solltemperatur nach Priorität: Fenster offen → Raum aus → Boost → manuelle Übersteuerung →
   Modus (Aus, Frostschutz, Urlaub, Abwesend, Eco, Komfort) → Anwesenheit → Zeitplan
+- **Nutzungsbasiertes Heizen:** Räume werden nur auf Komfort geheizt, solange sie genutzt
+  werden (Fernseher, PC, Präsenzmelder …); ungenutzte Räume fallen auf Eco. Je Raum abschaltbar
 - **Optimaler Start:** Aufheizen beginnt so früh, dass zum Zeitplanbeginn Komfort erreicht ist
 - Schreiben an Thermostate gedrosselt (Mindestabstand, Funk-Duty-Cycle), Korrektur über
   externe Raumsensoren, Übernahme von Handänderungen am Thermostat als Übersteuerung
@@ -41,12 +43,15 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
 **Lernen**
 - Aufheizrate je Raum (nach Außentemperatur), Auskühl-Zeitkonstante, Totzeit
 - Brennerzyklen, Heizkurve des Kesselreglers
+- **Gelernter Zeitplan:** aus der Anwesenheit entsteht ein Wochenplan als Vorschlag für die
+  ganze Anlage; auf Wunsch folgen ihm Räume ohne eigenen Zeitplan-Helfer
 - Jeder Wert mit Anzahl Messungen und Streuung
 
 **Panel „HeatConductor“ in der Seitenleiste**
 - *Übersicht:* Zustandsautomat, Grund, Zeitschutz, Räume, Verläufe (24 h / 7 Tage)
 - *Parameter:* jeder Parameter erklärt, mit Wirkung, Standard, Bereich; Änderungen wirken sofort
 - *Lernen:* gelernte Werte, Diagramme, Lernverlauf
+- *Zeitplan:* Anwesenheit je Wochentag und der daraus vorgeschlagene Wochenplan
 - *Was-wäre-wenn:* aufgezeichnete Daten mit geänderten Parametern durchspielen
 - *Protokoll:* wer hat wann welchen Parameter geändert
 - Alle Nutzer sehen das Panel, nur Administratoren ändern Parameter oder Lerndaten.
@@ -74,9 +79,10 @@ Home Assistant neu starten und die Integration wie oben hinzufügen.
    Vorlauf-Soll des Kesselreglers (Heizkurve), PV-Leistung.
 2. **Räume** (*Raum hinzufügen*): Thermostate (Climate), Sensoren Ventilöffnung
    (HomematicIP: `sensor.…_heating`), Raumtemperatur-Sensor, Fensterkontakte, Zeitplan-Helfer,
-   Gewichtung, Sensorkorrektur, Sonnengewinne. Räume ohne Thermostat als „Nur überwachen“.
+   Geräte für die Nutzungserkennung, Gewichtung, Sensorkorrektur, Sonnengewinne.
+   Räume ohne Thermostat als „Nur überwachen“.
 3. **Parameter**: im Panel unter *Parameter* oder unter *Konfigurieren* (Regelparameter,
-   Energie und Gas, Raumsteuerung, Lernen und Vorausschau).
+   Energie und Gas, Raumsteuerung, Nutzungserkennung, Lernen und Vorausschau).
 4. **Beobachten:** einige Tage die Entscheidungen im Panel mit dem echten Brennerbetrieb
    vergleichen, Parameter anpassen (die Was-wäre-wenn-Simulation hilft dabei).
 5. **Raumsteuerung einschalten** (Schalter *Raumsteuerung*): HeatConductor schreibt ab jetzt
@@ -90,6 +96,28 @@ Home Assistant neu starten und die Integration wie oben hinzufügen.
 Pro Raum einen **Zeitplan-Helfer** anlegen (*Einstellungen → Geräte & Dienste → Helfer →
 Zeitplan*): *an* = Komforttemperatur, *aus* = Eco-Temperatur. Komfort- und Eco-Temperatur
 stellst du je Raum an den Zahlen-Entitäten ein.
+
+### Nutzungsbasiertes Heizen
+
+Trage je Raum unter *Geräte für Nutzungserkennung* die Entitäten ein, an denen man die Nutzung
+erkennt: Fernseher (Media Player), Steckdose des PCs, Präsenzmelder, Lichter. Ist eine davon an,
+gilt der Raum als genutzt und wird auf **Komforttemperatur** geheizt, sonst auf **Eco**
+(Beispiel: 20 °C genutzt, 18 °C ungenutzt). Nach der letzten Aktivität bleibt der Raum noch die
+eingestellte **Nachlaufzeit** (Standard 30 min) auf Komfort.
+
+- Je Raum gibt es den Schalter *Nutzungserkennung* und den Sensor *Raum genutzt*.
+- Fenster offen, Raum aus, Boost, manuelle Übersteuerung, Urlaub und Abwesenheit haben weiter Vorrang.
+- *Nutzung hebt Absenkung auf* (Standard an): ein genutzter Raum wird auch in einer Absenkphase
+  auf Komfort geheizt. Ausschalten, wenn nachts keinesfalls geheizt werden soll.
+
+### Gelernter Zeitplan aus der Anwesenheit
+
+HeatConductor lernt aus den Anwesenheits-Entitäten, wann jemand zu Hause ist, und schlägt daraus
+einen Wochenplan vor (Panel-Reiter *Zeitplan*, sichtbar nach etwa zwei Wochen). Der Vorschlag
+gilt für die ganze Anlage.
+
+Mit dem Schalter *Gelernter Zeitplan* folgen ihm alle Räume **ohne eigenen Zeitplan-Helfer**;
+ein konfigurierter Zeitplan-Helfer hat immer Vorrang.
 
 ### Relais-Watchdog (Shelly)
 
@@ -169,6 +197,8 @@ Kessel-ESP mit Vor-/Rücklauf: siehe [esphome/README.md](esphome/README.md). Vai
 | Gradtagzahl gestern, Energie je Gradtag gestern | witterungsbereinigter Verbrauch |
 | je Raum: Thermostat, Solltemperatur, Komfort-/Eco-Temperatur | Raumsteuerung |
 | je Raum: Bedarf, Temperatur, Status | Attribute: Soll, Defizit, Ventil, Gewichtung |
+| je Raum: Nutzungserkennung, Raum genutzt | nur bei konfigurierten Geräten zur Nutzungserkennung |
+| Gelernter Zeitplan | an = Räume ohne Zeitplan-Helfer folgen dem gelernten Anwesenheitsplan |
 | je Raum: gelernte Aufheizrate, gelernte Auskühl-Zeitkonstante | Diagnose |
 
 ## Entwicklung

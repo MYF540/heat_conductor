@@ -42,6 +42,7 @@ class RoomControlInput:
     trvs: tuple[TrvInput, ...] = ()
     compensation: bool = True
     solar_gain: bool = False
+    activity: bool | None = None  # None: the room has no activity sensors
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +63,7 @@ class EngineSnapshot:
     automation_enabled: bool
     actuator_active: bool
     room_control_enabled: bool = False
+    learned_schedule_enabled: bool = False
     vacation_active: bool = False
     present: bool | None = None
     room_controls: tuple[RoomControlInput, ...] = ()
@@ -91,6 +93,7 @@ class EngineResult:
     setpoints: tuple[RoomSetpoint, ...] = ()
     trv_commands: tuple[TrvCommand, ...] = ()
     room_control_active: bool = False
+    learned_schedule_on: bool | None = None
     duty_cycle_ok: bool = True
     solar_ratio: float | None = None
     forecast_6h: float | None = None
@@ -205,6 +208,13 @@ class HeatingEngine:
             else None
         )
 
+        self.learner.presence.update(now, snap.present)
+        learned_on, learned_next = (
+            self.learner.presence.schedule_state(now)
+            if snap.learned_schedule_enabled
+            else (None, None)
+        )
+
         controls = {c.room_id: c for c in snap.room_controls}
         room_control_active = snap.room_control_enabled and snap.automation_enabled
         setpoints: list[RoomSetpoint] = []
@@ -216,6 +226,12 @@ class HeatingEngine:
             if room.kind is RoomKind.REGULATED and control is not None:
                 runtime = self.runtime(room.room_id)
                 learner = self.learner.room(room.room_id)
+                # Without its own schedule helper a room may follow the learned one.
+                schedule_on, next_schedule_on = (
+                    (control.schedule_on, control.next_schedule_on)
+                    if control.schedule_on is not None
+                    else (learned_on, learned_next)
+                )
                 setpoint = compute_setpoint(
                     room.room_id,
                     runtime,
@@ -224,13 +240,14 @@ class HeatingEngine:
                         mode=snap.mode,
                         vacation_active=snap.vacation_active,
                         present=snap.present,
-                        schedule_on=control.schedule_on,
-                        next_schedule_on=control.next_schedule_on,
+                        schedule_on=schedule_on,
+                        next_schedule_on=next_schedule_on,
                         window_open=any(room.windows_open),
                         room_temperature=_room_temperature(room, now, p.stale_after),
                         heat_rate=learner.heat_rate_for(outdoor.value),
                         dead_time=learner.dead_time_value(),
                         forecast_drop=forecast_drop,
+                        activity=control.activity,
                     ),
                     sp,
                 )
@@ -358,6 +375,7 @@ class HeatingEngine:
             setpoints=tuple(setpoints),
             trv_commands=tuple(commands),
             room_control_active=room_control_active,
+            learned_schedule_on=learned_on,
             duty_cycle_ok=duty_cycle_ok,
             solar_ratio=solar_ratio,
             forecast_6h=snap.forecast_6h,

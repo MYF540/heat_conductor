@@ -9,7 +9,7 @@
 const I18N = {
   de: {
     title: "HeatConductor",
-    tabs: { overview: "Übersicht", params: "Parameter", learning: "Lernen", simulate: "Was-wäre-wenn", log: "Protokoll" },
+    tabs: { overview: "Übersicht", params: "Parameter", learning: "Lernen", schedule: "Zeitplan", simulate: "Was-wäre-wenn", log: "Protokoll" },
     loading: "Lade …",
     notLoaded: "HeatConductor ist nicht eingerichtet.",
     refresh: "Aktualisieren",
@@ -43,7 +43,7 @@ const I18N = {
     groups: {
       start_stop: "Start und Stopp", cycle_protection: "Takt-Schutz", heating_limit: "Heizgrenze und Frost",
       safety: "Sicherheit", sensors: "Sensorik", energy: "Energie und Gas",
-      room_control: "Raumsteuerung", learning: "Lernen und Vorausschau",
+      room_control: "Raumsteuerung", usage: "Nutzungserkennung", learning: "Lernen und Vorausschau",
     },
     learningIntro: "Gelernte Werte mit Anzahl der Messungen und Streuung. Werte werden erst ab 3 Messungen verwendet.",
     heatRate: "Aufheizrate", coolingTau: "Auskühl-Zeitkonstante", deadTime: "Totzeit",
@@ -67,13 +67,25 @@ const I18N = {
     starts: "Starts", runtime: "Laufzeit (min)", deficitShare: "Zeit mit Defizit > 0,5 K",
     realBurner: "Echter Brenner", minutes: "min",
     simChart: "Bedarf und Anforderung",
+    inUse: "Nutzung", used: "genutzt", unused: "frei",
+    scheduleTitle: "Gelernter Zeitplan aus der Anwesenheit",
+    scheduleIntro: "HeatConductor merkt sich, wann jemand zu Hause ist, und schlägt daraus einen Wochenplan vor. Der Vorschlag gilt für die ganze Anlage. Räume ohne eigenen Zeitplan-Helfer folgen ihm, sobald der Schalter „Gelernter Zeitplan“ eingeschaltet ist.",
+    daysObserved: "Beobachtete Tage",
+    scheduleReady: "Vorschlag verfügbar", scheduleNotReady: "Sammelt noch Daten",
+    presenceHeat: "Anwesenheit je Wochentag (dunkler = häufiger zu Hause)",
+    suggestion: "Vorschlag für Komfortzeiten",
+    noWindows: "keine Komfortzeit",
+    learnedScheduleState: "Schalter „Gelernter Zeitplan“",
+    learnedScheduleNow: "Vorschlag gerade",
+    comfortNow: "Komfort", ecoNow: "Absenkung",
+    weekdays: ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"],
     log: "Änderungsprotokoll", time: "Zeit", user: "Benutzer", parameter: "Parameter", oldValue: "alt", newValue: "neu",
     emptyLog: "Noch keine Änderungen.",
     error: "Fehler",
   },
   en: {
     title: "HeatConductor",
-    tabs: { overview: "Overview", params: "Parameters", learning: "Learning", simulate: "What-if", log: "Change log" },
+    tabs: { overview: "Overview", params: "Parameters", learning: "Learning", schedule: "Schedule", simulate: "What-if", log: "Change log" },
     loading: "Loading …",
     notLoaded: "HeatConductor is not set up.",
     refresh: "Refresh",
@@ -97,7 +109,7 @@ const I18N = {
     groups: {
       start_stop: "Start and stop", cycle_protection: "Cycle protection", heating_limit: "Heating limit and frost",
       safety: "Safety", sensors: "Sensors", energy: "Energy and gas",
-      room_control: "Room control", learning: "Learning and anticipation",
+      room_control: "Room control", usage: "Usage detection", learning: "Learning and anticipation",
     },
     learningIntro: "Learned values with sample count and spread. Values are used from 3 samples on.",
     heatRate: "Heat-up rate", coolingTau: "Cooling time constant", deadTime: "Dead time",
@@ -119,6 +131,18 @@ const I18N = {
     noDraft: "No draft – change values in the Parameters tab and choose “Simulate draft”, or compare current values here.",
     starts: "Starts", runtime: "Run time (min)", deficitShare: "Time with deficit > 0.5 K",
     realBurner: "Real burner", minutes: "min", simChart: "Demand and request",
+    inUse: "Usage", used: "in use", unused: "free",
+    scheduleTitle: "Learned schedule from presence",
+    scheduleIntro: "HeatConductor learns when somebody is at home and suggests a weekly schedule from it. The suggestion applies to the whole installation. Rooms without their own schedule helper follow it once the switch \u201cLearned schedule\u201d is on.",
+    daysObserved: "Days observed",
+    scheduleReady: "Suggestion available", scheduleNotReady: "Still collecting data",
+    presenceHeat: "Presence per weekday (darker = at home more often)",
+    suggestion: "Suggested comfort periods",
+    noWindows: "no comfort period",
+    learnedScheduleState: "Switch \u201cLearned schedule\u201d",
+    learnedScheduleNow: "Suggestion right now",
+    comfortNow: "Comfort", ecoNow: "Setback",
+    weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
     log: "Change log", time: "Time", user: "User", parameter: "Parameter", oldValue: "old", newValue: "new",
     emptyLog: "No changes yet.", error: "Error",
   },
@@ -158,6 +182,8 @@ const PARAM_TEXT = {
     duty_cycle_limit: ["Duty-Cycle-Grenze", "Oberhalb keine automatischen Schreibvorgänge.", "Mehr Schreibvorgänge bei hoher Funklast."],
     force_manual_mode: ["Thermostate auf manuell stellen", "Verhindert, dass eigene Zeitprofile der Thermostate gegensteuern.", null],
     adopt_trv_changes: ["Änderungen am Thermostat übernehmen", "Von Hand verstellte Thermostate werden zur vorübergehenden Raumübersteuerung.", null],
+    usage_hold: ["Nachlaufzeit Nutzung", "So lange gilt ein Raum nach der letzten Aktivität noch als genutzt.", "Der Raum bleibt länger auf Komfort, weniger Takten bei kurzen Pausen."],
+    usage_in_eco: ["Nutzung hebt Absenkung auf", "Ein genutzter Raum wird auch in Absenkphasen auf Komforttemperatur geheizt.", null],
     optimum_start: ["Optimaler Start", "Heizt früh genug, damit zum Zeitplanbeginn die Komforttemperatur erreicht ist.", null],
     optimum_start_max_lead: ["Max. Vorlaufzeit optimaler Start", "Längste Zeit, die vor Zeitplanbeginn geheizt wird.", "Früherer Start bei großem Temperaturabstand."],
     residual_heat: ["Restwärme nutzen", "Stoppt den Brenner, wenn alle Räume über Soll liegen.", null],
@@ -197,6 +223,8 @@ const PARAM_TEXT = {
     duty_cycle_limit: ["Duty cycle limit", "No automatic writes above.", "More writes despite high radio load."],
     force_manual_mode: ["Switch thermostats to manual", "Prevents thermostat schedules from working against HeatConductor.", null],
     adopt_trv_changes: ["Adopt changes at the thermostat", "Manually turned thermostats become a temporary room override.", null],
+    usage_hold: ["Usage hold time", "How long a room still counts as in use after the last activity.", "The room stays at comfort longer, less cycling during short breaks."],
+    usage_in_eco: ["Usage overrides setback", "A room in use is heated to comfort during setback periods as well.", null],
     optimum_start: ["Optimum start", "Heats early enough to reach comfort temperature when the schedule begins.", null],
     optimum_start_max_lead: ["Max optimum start lead", "Longest heating time before the schedule begins.", "Earlier start for large temperature gaps."],
     residual_heat: ["Use residual heat", "Stops the burner when all rooms are above target.", null],
@@ -242,13 +270,13 @@ const SOURCE_TEXT = {
     window: "Fenster offen", room_off: "Raum aus", boost: "Boost", override: "Manuell", mode_off: "Modus Aus",
     frost_protection: "Frostschutz", vacation: "Urlaub", away: "Abwesend (Modus)", eco: "Eco (Modus)", comfort: "Komfort (Modus)",
     absent: "Niemand zu Hause", no_schedule: "Kein Zeitplan", schedule_comfort: "Zeitplan Komfort", schedule_eco: "Zeitplan Eco",
-    optimum_start: "Optimaler Start",
+    optimum_start: "Optimaler Start", usage_active: "Raum genutzt", usage_idle: "Raum ungenutzt",
   },
   en: {
     window: "Window open", room_off: "Room off", boost: "Boost", override: "Manual", mode_off: "Mode off",
     frost_protection: "Frost protection", vacation: "Vacation", away: "Away (mode)", eco: "Eco (mode)", comfort: "Comfort (mode)",
     absent: "Nobody home", no_schedule: "No schedule", schedule_comfort: "Schedule comfort", schedule_eco: "Schedule eco",
-    optimum_start: "Optimum start",
+    optimum_start: "Optimum start", usage_active: "Room in use", usage_idle: "Room unused",
   },
 };
 
@@ -355,6 +383,33 @@ function scatterChart({ points, xLabel, yLabel, line = null, height = 200 }) {
     `<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${height - pad.b}" class="grid"/>`,
   ];
   return `<div class="chart small"><div class="chart-title">${esc(yLabel)}</div><svg viewBox="0 0 ${width} ${height}">${axes.join("")}${fit}${dots}</svg></div>`;
+}
+
+/* Weekly presence heatmap: one row per weekday, one cell per time slot. */
+function presenceChart({ grid, slotMinutes, days }) {
+  const slots = grid[0].length;
+  const cell = 14;
+  const rowHeight = 22;
+  const left = 34;
+  const top = 16;
+  const width = left + slots * cell + 8;
+  const height = top + grid.length * rowHeight + 18;
+  const cells = grid.map((day, d) => day.map((value, i) => {
+    const x = left + i * cell;
+    const y = top + d * rowHeight;
+    const known = value !== null && value !== undefined;
+    const fill = known ? `rgba(255,138,0,${(0.08 + 0.92 * value).toFixed(3)})` : "rgba(128,128,128,0.12)";
+    const label = known ? `${days[d]} ${String(Math.floor(i * slotMinutes / 60)).padStart(2, "0")}:${String((i * slotMinutes) % 60).padStart(2, "0")} – ${Math.round(value * 100)} %` : "";
+    return `<rect x="${x}" y="${y}" width="${cell - 1}" height="${rowHeight - 3}" fill="${fill}"><title>${esc(label)}</title></rect>`;
+  }).join("")).join("");
+  const rowLabels = grid.map((_day, d) =>
+    `<text x="${left - 6}" y="${top + d * rowHeight + rowHeight / 2}" class="axis" text-anchor="end" dominant-baseline="middle">${esc(days[d].slice(0, 2))}</text>`).join("");
+  const hours = [];
+  for (let hour = 0; hour <= 24; hour += 3) {
+    const x = left + (hour * 60 / slotMinutes) * cell;
+    hours.push(`<text x="${x}" y="${height - 4}" class="axis" text-anchor="middle">${hour}</text>`);
+  }
+  return `<div class="chart"><svg viewBox="0 0 ${width} ${height}">${cells}${rowLabels}${hours.join("")}</svg></div>`;
 }
 
 function barChart({ values, labels, title, height = 150 }) {
@@ -531,7 +586,7 @@ class HeatConductorPanel extends HTMLElement {
       this._message = null;
       if (this._tab === "overview") { await this._loadState(); this._loadHistory(); }
       if (this._tab === "params" || this._tab === "simulate") await this._loadParams();
-      if (this._tab === "learning") await this._loadLearning();
+      if (this._tab === "learning" || this._tab === "schedule") await this._loadLearning();
       if (this._tab === "log") await this._loadChangelog();
       this._render();
     } else if (action === "refresh") {
@@ -619,12 +674,13 @@ class HeatConductorPanel extends HTMLElement {
   /* ------------------------------------------------------------ render */
 
   _render() {
-    const tabs = ["overview", "params", "learning", "simulate", "log"];
+    const tabs = ["overview", "params", "learning", "schedule", "simulate", "log"];
     let body = "";
     if (!this._state && !this._error) body = `<div class="card">${this.t("loading")}</div>`;
     else if (this._tab === "overview") body = this._renderOverview();
     else if (this._tab === "params") body = this._renderParams();
     else if (this._tab === "learning") body = this._renderLearning();
+    else if (this._tab === "schedule") body = this._renderSchedule();
     else if (this._tab === "simulate") body = this._renderSimulate();
     else if (this._tab === "log") body = this._renderLog();
 
@@ -687,6 +743,12 @@ class HeatConductorPanel extends HTMLElement {
       [this.t("roomControl"), s.settings.room_control_enabled ? this.t("on") : this.t("off")],
     ].map(([k, v]) => `<div class="fact"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
 
+    const showUsage = s.rooms.some((r) => r.usage_entities > 0);
+    const usageCell = (r) => {
+      if (!showUsage) return "";
+      if (!r.usage_entities || r.usage_enabled === false || r.in_use === null || r.in_use === undefined) return "<td>–</td>";
+      return `<td>${r.in_use ? this.t("used") : this.t("unused")}</td>`;
+    };
     const rows = s.rooms.map((r) => `
       <tr class="${r.status}">
         <td>${esc(r.name)}</td>
@@ -697,6 +759,7 @@ class HeatConductorPanel extends HTMLElement {
         <td>${fmt(r.deficit, 1, "K")}</td>
         <td><div class="mini"><div style="width:${Math.min(100, (r.demand ?? 0) * 100)}%"></div></div>${r.demand === null ? "–" : fmt(r.demand * 100, 0, "%")}</td>
         <td>${fmt(r.weight, 1)}</td>
+        ${usageCell(r)}
         <td>${esc(ROOM_STATUS_TEXT[lang][r.status] || r.status || "–")}</td>
       </tr>`).join("");
 
@@ -717,7 +780,7 @@ class HeatConductorPanel extends HTMLElement {
       <div class="card">
         <h2>${this.t("rooms")}</h2>
         <div class="scroll"><table>
-          <thead><tr><th>${this.t("room")}</th><th>${this.t("temp")}</th><th>${this.t("target")}</th><th>${this.t("source")}</th><th>${this.t("valve")}</th><th>${this.t("deficit")}</th><th>${this.t("demand")}</th><th>${this.t("weight")}</th><th>${this.t("status")}</th></tr></thead>
+          <thead><tr><th>${this.t("room")}</th><th>${this.t("temp")}</th><th>${this.t("target")}</th><th>${this.t("source")}</th><th>${this.t("valve")}</th><th>${this.t("deficit")}</th><th>${this.t("demand")}</th><th>${this.t("weight")}</th>${showUsage ? `<th>${this.t("inUse")}</th>` : ""}<th>${this.t("status")}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table></div>
       </div>
@@ -889,6 +952,42 @@ class HeatConductorPanel extends HTMLElement {
       </div>
       <div class="card"><h2>${this.t("heatingCurve")}</h2>${curve}
         ${scatterChart({ points: c.points, xLabel: `${this.t("outdoor")} °C`, yLabel: `${this.t("flow")} °C`, line: c.slope !== null ? [c.slope, c.flow_at_0] : null })}
+      </div>`;
+  }
+
+  _renderSchedule() {
+    const data = this._learning;
+    if (!data) return `<div class="card">${this.t("loading")}</div>`;
+    const p = data.presence;
+    const state = this._state && this._state.learned_schedule;
+    const days = this.t("weekdays");
+    const hhmm = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+    const windows = p.windows.map((day, i) => {
+      const text = day.length
+        ? day.map((w) => `${hhmm(w.start)}–${hhmm(w.end === 1440 ? 1439 : w.end)}`).join(", ")
+        : `<span class="hint">${this.t("noWindows")}</span>`;
+      return `<tr><td>${esc(days[i])}</td><td>${text}</td></tr>`;
+    }).join("");
+    const status = [
+      [this.t("daysObserved"), `${p.days_observed} / ${p.min_days}`],
+      ["", p.ready ? this.t("scheduleReady") : this.t("scheduleNotReady")],
+      [this.t("learnedScheduleState"), state ? (state.enabled ? this.t("on") : this.t("off")) : "–"],
+      [this.t("learnedScheduleNow"), state && state.comfort_now !== null && state.comfort_now !== undefined
+        ? (state.comfort_now ? this.t("comfortNow") : this.t("ecoNow")) : "–"],
+    ].map(([k, v]) => `<div class="fact"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
+    return `
+      <div class="card">
+        <div class="card-head"><h2>${this.t("scheduleTitle")}</h2></div>
+        <p>${this.t("scheduleIntro")}</p>
+        <div class="facts">${status}</div>
+      </div>
+      <div class="card">
+        <h2>${this.t("presenceHeat")}</h2>
+        ${presenceChart({ grid: p.grid, slotMinutes: p.slot_minutes, days: this.t("weekdays") })}
+      </div>
+      <div class="card">
+        <h2>${this.t("suggestion")}</h2>
+        <table><tbody>${windows}</tbody></table>
       </div>`;
   }
 

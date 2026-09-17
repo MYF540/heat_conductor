@@ -58,6 +58,7 @@ class Settings:
     automation_enabled: bool = True
     observation_mode: bool = True
     room_control_enabled: bool = False
+    learned_schedule_enabled: bool = False
     vacation_start: datetime | None = None
     vacation_end: datetime | None = None
     vacation_temp: float | None = None
@@ -75,6 +76,7 @@ class Settings:
             "automation_enabled": self.automation_enabled,
             "observation_mode": self.observation_mode,
             "room_control_enabled": self.room_control_enabled,
+            "learned_schedule_enabled": self.learned_schedule_enabled,
             "vacation_start": _iso(self.vacation_start),
             "vacation_end": _iso(self.vacation_end),
             "vacation_temp": self.vacation_temp,
@@ -89,6 +91,7 @@ class Settings:
         self.automation_enabled = bool(data.get("automation_enabled", True))
         self.observation_mode = bool(data.get("observation_mode", True))
         self.room_control_enabled = bool(data.get("room_control_enabled", False))
+        self.learned_schedule_enabled = bool(data.get("learned_schedule_enabled", False))
         self.vacation_start = _parse(data.get("vacation_start"))
         self.vacation_end = _parse(data.get("vacation_end"))
         temp = data.get("vacation_temp")
@@ -261,6 +264,16 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
         self.settings.room_control_enabled = enabled
         await self._settings_changed()
 
+    async def async_set_learned_schedule(self, enabled: bool) -> None:
+        """Let rooms without a schedule helper follow the learned presence schedule."""
+        self.settings.learned_schedule_enabled = enabled
+        await self._settings_changed()
+
+    async def async_set_room_usage(self, room_id: str, enabled: bool) -> None:
+        """Enable or disable usage detection for one room."""
+        self.engine.runtime(room_id).usage_enabled = enabled
+        await self._settings_changed()
+
     async def async_set_room_value(self, room_id: str, key: str, value: float) -> None:
         """Set comfort or eco temperature of a room."""
         if key not in ("comfort", "eco"):
@@ -350,6 +363,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
                 automation_enabled=self.settings.automation_enabled,
                 actuator_active=self.actuator_active,
                 room_control_enabled=self.settings.room_control_enabled,
+                learned_schedule_enabled=self.settings.learned_schedule_enabled,
                 vacation_active=self.settings.vacation_active(now),
                 forecast_6h=self.forecast_6h,
                 forecast_12h=self.forecast_12h,

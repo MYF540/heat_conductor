@@ -36,6 +36,20 @@ class SetpointSource(StrEnum):
     SCHEDULE_COMFORT = "schedule_comfort"
     SCHEDULE_ECO = "schedule_eco"
     OPTIMUM_START = "optimum_start"
+    USAGE_ACTIVE = "usage_active"
+    USAGE_IDLE = "usage_idle"
+
+
+# Sources the usage detection may change: the automatic comfort and eco decisions.
+AUTO_COMFORT_SOURCES = frozenset(
+    {
+        SetpointSource.COMFORT,
+        SetpointSource.NO_SCHEDULE,
+        SetpointSource.SCHEDULE_COMFORT,
+        SetpointSource.OPTIMUM_START,
+    }
+)
+AUTO_ECO_SOURCES = frozenset({SetpointSource.ECO, SetpointSource.SCHEDULE_ECO})
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +72,8 @@ class SetpointParams:
     adopt_trv_changes: bool = True
     optimum_start: bool = True
     optimum_start_max_lead: timedelta = timedelta(hours=3)
+    usage_hold: timedelta = timedelta(minutes=30)
+    usage_in_eco: bool = True
 
 
 @dataclass(slots=True)
@@ -77,6 +93,8 @@ class RoomRuntime:
     comfort: float
     eco: float
     enabled: bool = True
+    usage_enabled: bool = True
+    last_active_at: datetime | None = None
     override_temp: float | None = None
     override_until: datetime | None = None
     boost_until: datetime | None = None
@@ -92,6 +110,8 @@ class RoomRuntime:
             "comfort": self.comfort,
             "eco": self.eco,
             "enabled": self.enabled,
+            "usage_enabled": self.usage_enabled,
+            "last_active_at": _iso(self.last_active_at),
             "override_temp": self.override_temp,
             "override_until": _iso(self.override_until),
             "boost_until": _iso(self.boost_until),
@@ -114,6 +134,8 @@ class RoomRuntime:
             comfort=_float(data.get("comfort"), params.default_comfort),
             eco=_float(data.get("eco"), params.default_eco),
             enabled=bool(data.get("enabled", True)),
+            usage_enabled=bool(data.get("usage_enabled", True)),
+            last_active_at=_parse(data.get("last_active_at")),
             override_temp=_float(data.get("override_temp"), None),
             override_until=_parse(data.get("override_until")),
             boost_until=_parse(data.get("boost_until")),
@@ -144,6 +166,7 @@ class SetpointContext:
     heat_rate: float | None  # learned K/h
     dead_time: timedelta | None
     forecast_drop: bool = False
+    activity: bool | None = None  # None: the room has no activity sensors
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,6 +180,7 @@ class RoomSetpoint:
     override_until: datetime | None
     boost_until: datetime | None
     optimum_start_lead: timedelta | None
+    room_active: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -205,6 +229,18 @@ def optimum_start_lead(
         hours *= FORECAST_DROP_FACTOR
     lead = timedelta(hours=hours) + (ctx.dead_time or timedelta(0))
     return min(lead, params.optimum_start_max_lead)
+
+
+def room_active(runtime: RoomRuntime, ctx: SetpointContext, params: SetpointParams) -> bool | None:
+    """Whether the room is in use. None without activity sensors or detection off."""
+    if ctx.activity is None or not runtime.usage_enabled:
+        return None
+    if ctx.activity:
+        runtime.last_active_at = ctx.now
+        return True
+    if runtime.last_active_at is None:
+        return False
+    return ctx.now - runtime.last_active_at <= params.usage_hold
 
 
 def compute_setpoint(
@@ -270,6 +306,15 @@ def compute_setpoint(
         else:
             target, source = runtime.eco, SetpointSource.SCHEDULE_ECO
 
+    active = room_active(runtime, ctx, params)
+    if active:
+        if source in AUTO_ECO_SOURCES and params.usage_in_eco:
+            target, source = runtime.comfort, SetpointSource.USAGE_ACTIVE
+        elif source in AUTO_COMFORT_SOURCES:
+            source = SetpointSource.USAGE_ACTIVE
+    elif active is False and source in AUTO_COMFORT_SOURCES:
+        target, source = runtime.eco, SetpointSource.USAGE_IDLE
+
     target = clamp_temperature(target)
     changed = (
         runtime.last_target is None
@@ -286,6 +331,7 @@ def compute_setpoint(
         override_until=runtime.override_until,
         boost_until=runtime.boost_until,
         optimum_start_lead=lead,
+        room_active=active,
     )
 
 
