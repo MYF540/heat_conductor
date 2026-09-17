@@ -51,6 +51,7 @@
           "energy": "Energie und Gas",
           "room_control": "Raumsteuerung",
           "usage": "Nutzungserkennung",
+          "vacation": "Urlaub",
           "learning": "Lernen und Vorausschau"
         }
       },
@@ -167,6 +168,19 @@
           "usage_in_eco": "Ein genutzter Raum wird auch während einer Absenkphase auf Komforttemperatur geheizt."
         }
       },
+      "vacation": {
+        "title": "Automatischer Urlaub",
+        "description": "Ist längere Zeit niemand zu Hause, schaltet HeatConductor selbst in den Urlaubsmodus. Während eines Urlaubs lernt HeatConductor keinen Anwesenheits-Zeitplan. Beenden lässt er sich jederzeit über den Dienst „Urlaub beenden“ oder den Betriebsmodus.",
+        "data": {
+          "auto_vacation": "Urlaub automatisch erkennen",
+          "auto_vacation_after": "Urlaub starten nach",
+          "auto_vacation_return": "Urlaub beenden nach Rückkehr"
+        },
+        "data_description": {
+          "auto_vacation_after": "So lange muss niemand zu Hause sein, bevor der Urlaubsmodus startet.",
+          "auto_vacation_return": "So lange muss wieder jemand zu Hause sein, bevor der Urlaubsmodus endet."
+        }
+      },
       "learning": {
         "title": "Lernen und Vorausschau",
         "data": {
@@ -281,6 +295,9 @@
       },
       "room_in_use": {
         "name": "Raum genutzt"
+      },
+      "vacation": {
+        "name": "Urlaub"
       }
     },
     "select": {

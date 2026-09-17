@@ -27,6 +27,7 @@ from .setpoint import (
     plan_trv,
 )
 from .stats import DailyRuntime, RuntimeSnapshot
+from .vacation import AutoVacation, VacationParams
 
 SOLAR_ACTIVE_RATIO = 0.4
 FORECAST_DROP = 3.0
@@ -94,6 +95,8 @@ class EngineResult:
     trv_commands: tuple[TrvCommand, ...] = ()
     room_control_active: bool = False
     learned_schedule_on: bool | None = None
+    vacation_active: bool = False
+    auto_vacation_active: bool = False
     duty_cycle_ok: bool = True
     solar_ratio: float | None = None
     forecast_6h: float | None = None
@@ -118,10 +121,13 @@ class HeatingEngine:
         energy_params: EnergyParams | None = None,
         setpoint_params: SetpointParams | None = None,
         solar_reference: float = 0.0,
+        vacation_params: VacationParams | None = None,
     ) -> None:
         self.params = params
         self.setpoint_params = setpoint_params or SetpointParams()
         self.solar_reference = solar_reference
+        self.vacation_params = vacation_params or VacationParams()
+        self.auto_vacation = AutoVacation()
         self.boiler = BoilerController(params)
         self.outdoor_smoother = ExponentialSmoother(params.outdoor_smoothing)
         self.boiler_stats = DailyRuntime()
@@ -138,6 +144,7 @@ class HeatingEngine:
         energy_params: EnergyParams,
         setpoint_params: SetpointParams,
         solar_reference: float,
+        vacation_params: VacationParams | None = None,
     ) -> None:
         """Apply changed parameters without losing state."""
         self.params = params
@@ -148,6 +155,8 @@ class HeatingEngine:
         self.energy.params = energy_params
         self.setpoint_params = setpoint_params
         self.solar_reference = solar_reference
+        if vacation_params is not None:
+            self.vacation_params = vacation_params
 
     def runtime(self, room_id: str) -> RoomRuntime:
         """Settings and runtime state of a room (created with defaults)."""
@@ -208,7 +217,11 @@ class HeatingEngine:
             else None
         )
 
-        self.learner.presence.update(now, snap.present)
+        auto_vacation = self.auto_vacation.update(now, snap.present, self.vacation_params)
+        vacation = snap.vacation_active or auto_vacation
+        # A vacation says nothing about everyday habits, so it is not learned.
+        if not vacation and snap.mode is not OperatingMode.VACATION:
+            self.learner.presence.update(now, snap.present)
         learned_on, learned_next = (
             self.learner.presence.schedule_state(now)
             if snap.learned_schedule_enabled
@@ -238,7 +251,7 @@ class HeatingEngine:
                     SetpointContext(
                         now=now,
                         mode=snap.mode,
-                        vacation_active=snap.vacation_active,
+                        vacation_active=vacation,
                         present=snap.present,
                         schedule_on=schedule_on,
                         next_schedule_on=next_schedule_on,
@@ -279,7 +292,7 @@ class HeatingEngine:
                 demand=demand,
                 outdoor_smoothed=smoothed,
                 flow_temperature=flow,
-                mode=OperatingMode.VACATION if snap.vacation_active else snap.mode,
+                mode=OperatingMode.VACATION if vacation else snap.mode,
                 automation_enabled=snap.automation_enabled,
                 actuator_active=snap.actuator_active,
                 relay_on=snap.relay_on,
@@ -376,6 +389,8 @@ class HeatingEngine:
             trv_commands=tuple(commands),
             room_control_active=room_control_active,
             learned_schedule_on=learned_on,
+            vacation_active=vacation,
+            auto_vacation_active=auto_vacation,
             duty_cycle_ok=duty_cycle_ok,
             solar_ratio=solar_ratio,
             forecast_6h=snap.forecast_6h,
@@ -400,6 +415,7 @@ class HeatingEngine:
             "energy": self.energy.to_dict(),
             "rooms": {room_id: runtime.to_dict() for room_id, runtime in self.room_runtime.items()},
             "learning": self.learner.to_dict(),
+            "auto_vacation": self.auto_vacation.to_dict(),
         }
 
     def restore(self, data: dict[str, Any]) -> None:
@@ -421,6 +437,7 @@ class HeatingEngine:
             for room_id, room in (data.get("rooms") or {}).items()
         }
         self.learner = Learner.from_dict(data.get("learning"))
+        self.auto_vacation = AutoVacation.from_dict(data.get("auto_vacation"))
 
 
 def _room_temperature(room: RoomInput, now: datetime, max_age: timedelta) -> float | None:

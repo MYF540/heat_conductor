@@ -163,6 +163,12 @@ def build_state(hass: HomeAssistant, coordinator: HeatConductorCoordinator) -> d
             },
             "energy": _jsonable(asdict(result.energy)),
             "room_control_active": result.room_control_active,
+            "vacation": {
+                "active": result.vacation_active,
+                "automatic": result.auto_vacation_active,
+                "since": _jsonable(coordinator.engine.auto_vacation.since),
+                "nobody_home_since": _jsonable(coordinator.engine.auto_vacation.absent_since),
+            },
             "learned_schedule": {
                 "enabled": coordinator.settings.learned_schedule_enabled,
                 "comfort_now": result.learned_schedule_on,

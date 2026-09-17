@@ -8,6 +8,7 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass, Bina
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .coordinator import HeatConductorConfigEntry, HeatConductorCoordinator, RoomConfig
 from .core.models import BoilerState, RoomKind, RoomStatus
@@ -31,12 +32,43 @@ async def async_setup_entry(
             entities.append(CondensingSensor(coordinator))
     if coordinator.entities.watchdog_url is not None:
         entities.append(WatchdogSensor(coordinator))
+    if coordinator.entities.presence:
+        entities.append(VacationSensor(coordinator))
     async_add_entities(entities)
     for room in coordinator.rooms:
         if room.kind is RoomKind.REGULATED and room.usage_entities:
             async_add_entities(
                 [RoomInUseSensor(coordinator, room)], config_subentry_id=room.room_id
             )
+
+
+class VacationSensor(HeatConductorEntity, BinarySensorEntity):
+    """On while the installation is in vacation mode, scheduled or automatic."""
+
+    def __init__(self, coordinator: HeatConductorCoordinator) -> None:
+        super().__init__(coordinator, "vacation")
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether a vacation is running."""
+        return self.coordinator.data.vacation_active
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Where the vacation comes from and since when."""
+        auto = self.coordinator.engine.auto_vacation
+        settings = self.coordinator.settings
+        source = "off"
+        if settings.vacation_active(dt_util.now()):
+            source = "scheduled"
+        elif auto.active:
+            source = "automatic"
+        return {
+            "source": source,
+            "since": auto.since.isoformat() if auto.since else None,
+            "nobody_home_since": auto.absent_since.isoformat() if auto.absent_since else None,
+            "automatic_enabled": self.coordinator.engine.vacation_params.enabled,
+        }
 
 
 class RoomInUseSensor(RoomEntity, BinarySensorEntity):

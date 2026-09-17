@@ -45,6 +45,8 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
 - Brennerzyklen, Heizkurve des Kesselreglers
 - **Gelernter Zeitplan:** aus der Anwesenheit entsteht ein Wochenplan als Vorschlag für die
   ganze Anlage; auf Wunsch folgen ihm Räume ohne eigenen Zeitplan-Helfer
+- **Automatischer Urlaub:** ist zwei Tage niemand zu Hause, schaltet HeatConductor in den
+  Urlaubsmodus und beendet ihn drei Stunden nach der Rückkehr; währenddessen wird nicht gelernt
 - Jeder Wert mit Anzahl Messungen und Streuung
 
 **Panel „HeatConductor“ in der Seitenleiste**
@@ -82,7 +84,7 @@ Home Assistant neu starten und die Integration wie oben hinzufügen.
    Geräte für die Nutzungserkennung, Gewichtung, Sensorkorrektur, Sonnengewinne.
    Räume ohne Thermostat als „Nur überwachen“.
 3. **Parameter**: im Panel unter *Parameter* oder unter *Konfigurieren* (Regelparameter,
-   Energie und Gas, Raumsteuerung, Nutzungserkennung, Lernen und Vorausschau).
+   Energie und Gas, Raumsteuerung, Nutzungserkennung, Urlaub, Lernen und Vorausschau).
 4. **Beobachten:** einige Tage die Entscheidungen im Panel mit dem echten Brennerbetrieb
    vergleichen, Parameter anpassen (die Was-wäre-wenn-Simulation hilft dabei).
 5. **Raumsteuerung einschalten** (Schalter *Raumsteuerung*): HeatConductor schreibt ab jetzt
@@ -118,6 +120,20 @@ gilt für die ganze Anlage.
 
 Mit dem Schalter *Gelernter Zeitplan* folgen ihm alle Räume **ohne eigenen Zeitplan-Helfer**;
 ein konfigurierter Zeitplan-Helfer hat immer Vorrang.
+
+### Automatischer Urlaub
+
+Ist **zwei Tage** niemand zu Hause (Anwesenheits-Entitäten unter *Zentrale Entitäten*), schaltet
+HeatConductor selbst in den **Urlaubsmodus**: alle Räume auf Urlaubstemperatur (Standard 15 °C).
+Ist wieder **drei Stunden** jemand zu Hause, endet er. Beide Zeiten sind einstellbar, die
+Erkennung lässt sich abschalten (*Konfigurieren → Urlaub*).
+
+- Die Entität *Urlaub* zeigt, ob gerade Urlaub läuft und ob er automatisch oder geplant ist.
+- Von Hand beenden: Dienst `heat_conductor.clear_vacation` oder Betriebsmodus umstellen.
+  Danach braucht es wieder die volle Abwesenheit, bevor der Urlaubsmodus erneut startet.
+- Ein kurzer Besuch beendet den Urlaub nicht, weil erst die Rückkehrzeit ablaufen muss.
+- **Während eines Urlaubs lernt HeatConductor keinen Zeitplan.** Sonst würden zwei Wochen
+  Abwesenheit den Anwesenheitsplan verwässern.
 
 ### Relais-Watchdog (Shelly)
 
@@ -199,6 +215,7 @@ Kessel-ESP mit Vor-/Rücklauf: siehe [esphome/README.md](esphome/README.md). Vai
 | je Raum: Bedarf, Temperatur, Status | Attribute: Soll, Defizit, Ventil, Gewichtung |
 | je Raum: Nutzungserkennung, Raum genutzt | nur bei konfigurierten Geräten zur Nutzungserkennung |
 | Gelernter Zeitplan | an = Räume ohne Zeitplan-Helfer folgen dem gelernten Anwesenheitsplan |
+| Urlaub | Urlaub aktiv (Attribute: geplant oder automatisch, seit wann, niemand zu Hause seit) |
 | je Raum: gelernte Aufheizrate, gelernte Auskühl-Zeitkonstante | Diagnose |
 
 ## Entwicklung

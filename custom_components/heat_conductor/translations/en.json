@@ -51,6 +51,7 @@
           "energy": "Energy and gas",
           "room_control": "Room control",
           "usage": "Usage detection",
+          "vacation": "Vacation",
           "learning": "Learning and anticipation"
         }
       },
@@ -167,6 +168,19 @@
           "usage_in_eco": "A room in use is heated to comfort temperature during setback periods as well."
         }
       },
+      "vacation": {
+        "title": "Automatic vacation",
+        "description": "When nobody is at home for a long time, HeatConductor switches to vacation mode by itself. During a vacation no presence schedule is learned. It can be ended at any time with the “Clear vacation” service or the operating mode.",
+        "data": {
+          "auto_vacation": "Detect vacation automatically",
+          "auto_vacation_after": "Start vacation after",
+          "auto_vacation_return": "End vacation after return"
+        },
+        "data_description": {
+          "auto_vacation_after": "Nobody may be at home for this long before vacation mode starts.",
+          "auto_vacation_return": "Somebody has to be at home this long before vacation mode ends."
+        }
+      },
       "learning": {
         "title": "Learning and anticipation",
         "data": {
@@ -281,6 +295,9 @@
       },
       "room_in_use": {
         "name": "Room in use"
+      },
+      "vacation": {
+        "name": "Vacation"
       }
     },
     "select": {

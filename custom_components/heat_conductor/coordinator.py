@@ -41,7 +41,13 @@ from .core.models import ControlParams, OperatingMode
 from .core.setpoint import SetpointParams, TrvCommand
 from .helpers import IssueTracker, async_fetch_forecast, async_send_heartbeat
 from .inputs import ControlState, EntityConfig, InputReader, RoomConfig, build_snapshot
-from .params import control_params, energy_params, setpoint_params, solar_reference
+from .params import (
+    control_params,
+    energy_params,
+    setpoint_params,
+    solar_reference,
+    vacation_params,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -117,7 +123,11 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
         self.energy_params: EnergyParams = energy_params(self._options)
         self.setpoint_params: SetpointParams = setpoint_params(self._options)
         self.engine = HeatingEngine(
-            self.params, self.energy_params, self.setpoint_params, solar_reference(self._options)
+            self.params,
+            self.energy_params,
+            self.setpoint_params,
+            solar_reference(self._options),
+            vacation_params(self._options),
         )
         self.settings = Settings()
         self.changelog: list[dict[str, Any]] = []
@@ -237,7 +247,11 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
         self.energy_params = energy_params(new)
         self.setpoint_params = setpoint_params(new)
         self.engine.update_params(
-            self.params, self.energy_params, self.setpoint_params, solar_reference(new)
+            self.params,
+            self.energy_params,
+            self.setpoint_params,
+            solar_reference(new),
+            vacation_params(new),
         )
         self.hass.async_create_task(self.async_request_refresh())
         return True
@@ -313,10 +327,11 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
         await self._settings_changed()
 
     async def async_clear_vacation(self) -> None:
-        """End a vacation."""
+        """End a vacation, including one started automatically."""
         self.settings.vacation_start = None
         self.settings.vacation_end = None
         self.settings.vacation_temp = None
+        self.engine.auto_vacation.reset(dt_util.now())
         await self._settings_changed()
 
     async def async_reset_learning(self, room_id: str | None = None) -> None:

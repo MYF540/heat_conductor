@@ -137,6 +137,17 @@ USAGE_DEFAULTS: Final[dict[str, float | bool]] = {
     CONF_USAGE_IN_ECO: True,  # a used room is heated during setback periods too
 }
 
+# Automatic vacation (stored in options)
+CONF_AUTO_VACATION: Final = "auto_vacation"
+CONF_AUTO_VACATION_AFTER: Final = "auto_vacation_after"
+CONF_AUTO_VACATION_RETURN: Final = "auto_vacation_return"
+
+VACATION_DEFAULTS: Final[dict[str, float | bool]] = {
+    CONF_AUTO_VACATION: True,
+    CONF_AUTO_VACATION_AFTER: 48,  # h without anybody at home
+    CONF_AUTO_VACATION_RETURN: 180,  # min at home before it ends
+}
+
 # Learning and anticipation (stored in options)
 CONF_OPTIMUM_START: Final = "optimum_start"
 CONF_OPTIMUM_START_MAX_LEAD: Final = "optimum_start_max_lead"
@@ -157,5 +168,6 @@ ALL_DEFAULTS: Final[dict[str, float | bool]] = {
     **ENERGY_DEFAULTS,
     **ROOM_CONTROL_DEFAULTS,
     **USAGE_DEFAULTS,
+    **VACATION_DEFAULTS,
     **LEARNING_DEFAULTS,
 }

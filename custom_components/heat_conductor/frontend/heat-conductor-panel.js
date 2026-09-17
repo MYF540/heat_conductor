@@ -43,7 +43,8 @@ const I18N = {
     groups: {
       start_stop: "Start und Stopp", cycle_protection: "Takt-Schutz", heating_limit: "Heizgrenze und Frost",
       safety: "Sicherheit", sensors: "Sensorik", energy: "Energie und Gas",
-      room_control: "Raumsteuerung", usage: "Nutzungserkennung", learning: "Lernen und Vorausschau",
+      room_control: "Raumsteuerung", usage: "Nutzungserkennung", vacation: "Urlaub",
+      learning: "Lernen und Vorausschau",
     },
     learningIntro: "Gelernte Werte mit Anzahl der Messungen und Streuung. Werte werden erst ab 3 Messungen verwendet.",
     heatRate: "Aufheizrate", coolingTau: "Auskühl-Zeitkonstante", deadTime: "Totzeit",
@@ -79,6 +80,7 @@ const I18N = {
     learnedScheduleNow: "Vorschlag gerade",
     comfortNow: "Komfort", ecoNow: "Absenkung",
     weekdays: ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"],
+    vacationState: "Urlaub", vacationAuto: "automatisch", vacationScheduled: "geplant",
     log: "Änderungsprotokoll", time: "Zeit", user: "Benutzer", parameter: "Parameter", oldValue: "alt", newValue: "neu",
     emptyLog: "Noch keine Änderungen.",
     error: "Fehler",
@@ -109,7 +111,8 @@ const I18N = {
     groups: {
       start_stop: "Start and stop", cycle_protection: "Cycle protection", heating_limit: "Heating limit and frost",
       safety: "Safety", sensors: "Sensors", energy: "Energy and gas",
-      room_control: "Room control", usage: "Usage detection", learning: "Learning and anticipation",
+      room_control: "Room control", usage: "Usage detection", vacation: "Vacation",
+      learning: "Learning and anticipation",
     },
     learningIntro: "Learned values with sample count and spread. Values are used from 3 samples on.",
     heatRate: "Heat-up rate", coolingTau: "Cooling time constant", deadTime: "Dead time",
@@ -143,6 +146,7 @@ const I18N = {
     learnedScheduleNow: "Suggestion right now",
     comfortNow: "Comfort", ecoNow: "Setback",
     weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+    vacationState: "Vacation", vacationAuto: "automatic", vacationScheduled: "scheduled",
     log: "Change log", time: "Time", user: "User", parameter: "Parameter", oldValue: "old", newValue: "new",
     emptyLog: "No changes yet.", error: "Error",
   },
@@ -184,6 +188,9 @@ const PARAM_TEXT = {
     adopt_trv_changes: ["Änderungen am Thermostat übernehmen", "Von Hand verstellte Thermostate werden zur vorübergehenden Raumübersteuerung.", null],
     usage_hold: ["Nachlaufzeit Nutzung", "So lange gilt ein Raum nach der letzten Aktivität noch als genutzt.", "Der Raum bleibt länger auf Komfort, weniger Takten bei kurzen Pausen."],
     usage_in_eco: ["Nutzung hebt Absenkung auf", "Ein genutzter Raum wird auch in Absenkphasen auf Komforttemperatur geheizt.", null],
+    auto_vacation: ["Urlaub automatisch erkennen", "Ist lange niemand zu Hause, schaltet HeatConductor selbst in den Urlaubsmodus.", null],
+    auto_vacation_after: ["Urlaub starten nach", "So lange muss niemand zu Hause sein, bis der Urlaubsmodus startet.", "Der Urlaubsmodus greift später, dafür seltener versehentlich."],
+    auto_vacation_return: ["Urlaub beenden nach Rückkehr", "So lange muss wieder jemand zu Hause sein, bis der Urlaubsmodus endet.", "Kurze Besuche beenden den Urlaub nicht, dafür heizt es nach der Rückkehr später an."],
     optimum_start: ["Optimaler Start", "Heizt früh genug, damit zum Zeitplanbeginn die Komforttemperatur erreicht ist.", null],
     optimum_start_max_lead: ["Max. Vorlaufzeit optimaler Start", "Längste Zeit, die vor Zeitplanbeginn geheizt wird.", "Früherer Start bei großem Temperaturabstand."],
     residual_heat: ["Restwärme nutzen", "Stoppt den Brenner, wenn alle Räume über Soll liegen.", null],
@@ -225,6 +232,9 @@ const PARAM_TEXT = {
     adopt_trv_changes: ["Adopt changes at the thermostat", "Manually turned thermostats become a temporary room override.", null],
     usage_hold: ["Usage hold time", "How long a room still counts as in use after the last activity.", "The room stays at comfort longer, less cycling during short breaks."],
     usage_in_eco: ["Usage overrides setback", "A room in use is heated to comfort during setback periods as well.", null],
+    auto_vacation: ["Detect vacation automatically", "When nobody is at home for a long time, HeatConductor switches to vacation mode by itself.", null],
+    auto_vacation_after: ["Start vacation after", "Nobody may be at home for this long before vacation mode starts.", "Vacation mode starts later but less often by accident."],
+    auto_vacation_return: ["End vacation after return", "Somebody has to be at home this long before vacation mode ends.", "Short visits do not end the vacation, but heating starts later after the return."],
     optimum_start: ["Optimum start", "Heats early enough to reach comfort temperature when the schedule begins.", null],
     optimum_start_max_lead: ["Max optimum start lead", "Longest heating time before the schedule begins.", "Earlier start for large temperature gaps."],
     residual_heat: ["Use residual heat", "Stops the burner when all rooms are above target.", null],
@@ -741,6 +751,9 @@ class HeatConductorPanel extends HTMLElement {
       [this.t("power") + " / " + this.t("modulation"), e.has_gas_source ? `${fmt(e.burner_power, 1, "kW")} / ${fmt(e.burner_modulation, 0, "%")}` : "–"],
       [this.t("observation"), s.settings.observation_mode ? this.t("on") : this.t("off")],
       [this.t("roomControl"), s.settings.room_control_enabled ? this.t("on") : this.t("off")],
+      ...(s.vacation && s.vacation.active
+        ? [[this.t("vacationState"), s.vacation.automatic ? this.t("vacationAuto") : this.t("vacationScheduled")]]
+        : []),
     ].map(([k, v]) => `<div class="fact"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
 
     const showUsage = s.rooms.some((r) => r.usage_entities > 0);

@@ -247,6 +247,7 @@ class HeatConductorOptionsFlow(OptionsFlow):
                 "energy",
                 "room_control",
                 "usage",
+                "vacation",
                 "learning",
             ],
         )
@@ -301,6 +302,12 @@ class HeatConductorOptionsFlow(OptionsFlow):
     async def async_step_usage(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Edit usage based heating parameters."""
         return await self._group_step("usage", user_input)
+
+    async def async_step_vacation(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Edit automatic vacation parameters."""
+        return await self._group_step("vacation", user_input)
 
     async def async_step_learning(
         self, user_input: dict[str, Any] | None = None

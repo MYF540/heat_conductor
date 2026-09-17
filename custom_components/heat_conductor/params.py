@@ -13,6 +13,9 @@ from typing import Any
 from .const import (
     ALL_DEFAULTS,
     CONF_ADOPT_TRV_CHANGES,
+    CONF_AUTO_VACATION,
+    CONF_AUTO_VACATION_AFTER,
+    CONF_AUTO_VACATION_RETURN,
     CONF_BOOST_DURATION,
     CONF_BOOST_TEMP,
     CONF_BURNER_FLOW_THRESHOLD,
@@ -55,6 +58,7 @@ from .const import (
 from .core.energy import EnergyParams
 from .core.models import ControlParams
 from .core.setpoint import SetpointParams
+from .core.vacation import VacationParams
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,6 +137,9 @@ PARAMS: tuple[ParamMeta, ...] = (
     _b(CONF_ADOPT_TRV_CHANGES, "room_control"),
     _n(CONF_USAGE_HOLD, "usage", "min", 0, 240, 5),
     _b(CONF_USAGE_IN_ECO, "usage"),
+    _b(CONF_AUTO_VACATION, "vacation"),
+    _n(CONF_AUTO_VACATION_AFTER, "vacation", "h", 6, 336, 1),
+    _n(CONF_AUTO_VACATION_RETURN, "vacation", "min", 15, 1440, 15),
     _b(CONF_OPTIMUM_START, "learning"),
     _n(CONF_OPTIMUM_START_MAX_LEAD, "learning", "min", 15, 480, 15),
     _b(CONF_RESIDUAL_HEAT, "learning"),
@@ -230,6 +237,15 @@ def setpoint_params(options: dict[str, Any]) -> SetpointParams:
         optimum_start_max_lead=timedelta(minutes=f(CONF_OPTIMUM_START_MAX_LEAD)),
         usage_hold=timedelta(minutes=f(CONF_USAGE_HOLD)),
         usage_in_eco=bool(_value(options, CONF_USAGE_IN_ECO)),
+    )
+
+
+def vacation_params(options: dict[str, Any]) -> VacationParams:
+    """When automatic vacation starts and ends."""
+    return VacationParams(
+        enabled=bool(_value(options, CONF_AUTO_VACATION)),
+        absence=timedelta(hours=float(_value(options, CONF_AUTO_VACATION_AFTER))),
+        presence=timedelta(minutes=float(_value(options, CONF_AUTO_VACATION_RETURN))),
     )
 
 
