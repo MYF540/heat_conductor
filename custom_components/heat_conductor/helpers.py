@@ -88,6 +88,8 @@ class IssueTracker:
             "no_data": decision.state is BoilerState.FAILSAFE and decision.reason is Reason.NO_DATA,
             "relay_unavailable": decision.reason is Reason.RELAY_UNAVAILABLE,
             "watchdog_unreachable": watchdog_problem,
+            "relay_feedback_mismatch": result.diagnosis.relay_mismatch,
+            "boiler_summer_mode": result.diagnosis.summer_mode_conflict,
         }
         for issue_id, present in conditions.items():
             if not present:

@@ -81,6 +81,12 @@ const I18N = {
     comfortNow: "Komfort", ecoNow: "Absenkung",
     weekdays: ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"],
     vacationState: "Urlaub", vacationAuto: "automatisch", vacationScheduled: "geplant",
+    boilerSees: "Kessel sieht Anforderung", burnerLock: "Brennersperrzeit", boilerPump: "Heizungspumpe",
+    boilerSeason: "Kessel-Betriebsart", winter: "Winter", summer: "Sommer",
+    relayMismatch: "Relais und Kessel-Rückmeldung passen nicht zusammen",
+    summerConflict: "Kessel steht auf Sommer, obwohl geheizt werden soll",
+    flowSuspect: "Vorlauf-Rohrfühler weicht ungewöhnlich stark vom Kesselfühler ab",
+    boilerFlow: "Vorlauf Kessel / Rohr", boilerSpread: "Spreizung am Kessel", typical: "üblich",
     log: "Änderungsprotokoll", time: "Zeit", user: "Benutzer", parameter: "Parameter", oldValue: "alt", newValue: "neu",
     emptyLog: "Noch keine Änderungen.",
     error: "Fehler",
@@ -147,6 +153,12 @@ const I18N = {
     comfortNow: "Comfort", ecoNow: "Setback",
     weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
     vacationState: "Vacation", vacationAuto: "automatic", vacationScheduled: "scheduled",
+    boilerSees: "Boiler sees demand", burnerLock: "Burner lock time", boilerPump: "Heating pump",
+    boilerSeason: "Boiler mode", winter: "winter", summer: "summer",
+    relayMismatch: "Relay and boiler feedback disagree",
+    summerConflict: "Boiler is in summer mode although heating is needed",
+    flowSuspect: "Flow pipe sensor deviates unusually from the boiler sensor",
+    boilerFlow: "Flow boiler / pipe", boilerSpread: "Boiler spread", typical: "usual",
     log: "Change log", time: "Time", user: "User", parameter: "Parameter", oldValue: "old", newValue: "new",
     emptyLog: "No changes yet.", error: "Error",
   },
@@ -754,6 +766,7 @@ class HeatConductorPanel extends HTMLElement {
       ...(s.vacation && s.vacation.active
         ? [[this.t("vacationState"), s.vacation.automatic ? this.t("vacationAuto") : this.t("vacationScheduled")]]
         : []),
+      ...this._boilerFeedbackFacts(s),
     ].map(([k, v]) => `<div class="fact"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
 
     const showUsage = s.rooms.some((r) => r.usage_entities > 0);
@@ -782,6 +795,7 @@ class HeatConductorPanel extends HTMLElement {
           <div class="card-head"><h2>${this.t("boiler")}</h2><button data-action="refresh">${this.t("refresh")}</button></div>
           ${machine}
           <div class="reason">${this.t("reason")}: <b>${esc(REASON_TEXT[lang][d.reason] || d.reason)}</b> · ${this.t("requestHeat")}: <b>${d.request_heat ? this.t("yes") : this.t("no")}</b></div>
+          ${this._boilerWarnings(s)}
           ${gauge}
         </div>
         <div class="card">
@@ -798,6 +812,36 @@ class HeatConductorPanel extends HTMLElement {
         </table></div>
       </div>
       ${this._renderHistory()}`;
+  }
+
+  _boilerWarnings(s) {
+    const d = s.boiler && s.boiler.diagnosis;
+    if (!d) return "";
+    const lines = [];
+    if (d.relay_mismatch) lines.push(this.t("relayMismatch"));
+    if (d.summer_mode_conflict) lines.push(this.t("summerConflict"));
+    if (d.flow_sensor_suspect) lines.push(this.t("flowSuspect"));
+    if (d.burner_locked && d.burner_lock_minutes) lines.push(`${this.t("burnerLock")}: ${fmt(d.burner_lock_minutes, 0, "min")}`);
+    return lines.map((l) => `<div class="hint warn">${esc(l)}</div>`).join("");
+  }
+
+  _boilerFeedbackFacts(s) {
+    const b = s.boiler || {};
+    const d = b.diagnosis;
+    const has = b.feedback_configured || {};
+    if (!d) return [];
+    const yesNo = (v) => (v === null || v === undefined ? "–" : v ? this.t("yes") : this.t("no"));
+    const facts = [];
+    if (has.relay_feedback) facts.push([this.t("boilerSees"), yesNo(d.relay_feedback)]);
+    if (has.burner_lock) facts.push([this.t("burnerLock"), d.burner_lock_minutes === null ? "–" : fmt(d.burner_lock_minutes, 0, "min")]);
+    if (has.winter_mode) facts.push([this.t("boilerSeason"), d.winter_mode === null ? "–" : d.winter_mode ? this.t("winter") : this.t("summer")]);
+    if (has.pump) facts.push([this.t("boilerPump"), d.pump_on === null ? "–" : d.pump_on ? this.t("on") : this.t("off")]);
+    if (has.boiler_flow) {
+      const typical = d.flow_deviation_typical === null ? "" : ` (${this.t("typical")} ${fmt(d.flow_deviation_typical, 1, "K")})`;
+      facts.push([this.t("boilerFlow"), `${fmt(d.boiler_flow, 1)} / ${fmt(b.flow_temperature, 1, "°C")}${typical}`]);
+      facts.push([this.t("boilerSpread"), fmt(d.boiler_spread, 1, "K")]);
+    }
+    return facts;
   }
 
   _renderStateMachine(active) {
@@ -1117,6 +1161,7 @@ const STYLE = `
   .legend.unit { color: var(--secondary-text-color); }
   .range { display:flex; gap: 6px; align-items:center; margin: 8px 0; flex-wrap:wrap; }
   .hint { color: var(--secondary-text-color); font-size: 13px; }
+  .hint.warn { color: var(--error-color, #db4437); font-weight: 500; margin-top: 4px; }
   .savebar { position: sticky; top: 56px; z-index: 1; display:flex; flex-wrap:wrap; align-items:center; gap: 8px; justify-content:flex-end; background: var(--card-background-color, #fff); border: 1px solid var(--divider-color, #ddd); border-radius: 12px; padding: 8px 12px; margin-bottom: 16px; }
   .param { display:flex; justify-content:space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--divider-color, #eee); flex-wrap: wrap; }
   .param:last-child { border-bottom: none; }

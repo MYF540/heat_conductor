@@ -36,7 +36,11 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import (
+    CONF_BOILER_FLOW_TEMPERATURE,
+    CONF_BOILER_RETURN_TEMPERATURE,
     CONF_BOILER_SWITCH,
+    CONF_BOILER_WINTER_MODE,
+    CONF_BURNER_LOCK,
     CONF_BURNER_SENSOR,
     CONF_CLIMATES,
     CONF_COMPENSATION,
@@ -47,6 +51,8 @@ from .const import (
     CONF_GAS_METER,
     CONF_OUTDOOR_SENSORS,
     CONF_PRESENCE,
+    CONF_PUMP_SENSOR,
+    CONF_RELAY_FEEDBACK,
     CONF_RETURN_TEMPERATURE,
     CONF_ROOM_KIND,
     CONF_ROOM_TEMPERATURE,
@@ -151,6 +157,12 @@ class EntityConfig:
     duty_cycle: str | None = None
     flow_setpoint: str | None = None
     solar_power: str | None = None
+    relay_feedback: str | None = None
+    burner_lock: str | None = None
+    boiler_winter_mode: str | None = None
+    pump: str | None = None
+    boiler_flow_temperature: str | None = None
+    boiler_return_temperature: str | None = None
 
     @classmethod
     def from_entry(cls, entry: ConfigEntry) -> EntityConfig:
@@ -179,6 +191,12 @@ class EntityConfig:
             duty_cycle=one(CONF_DUTY_CYCLE),
             flow_setpoint=one(CONF_FLOW_SETPOINT),
             solar_power=one(CONF_SOLAR_POWER),
+            relay_feedback=one(CONF_RELAY_FEEDBACK),
+            burner_lock=one(CONF_BURNER_LOCK),
+            boiler_winter_mode=one(CONF_BOILER_WINTER_MODE),
+            pump=one(CONF_PUMP_SENSOR),
+            boiler_flow_temperature=one(CONF_BOILER_FLOW_TEMPERATURE),
+            boiler_return_temperature=one(CONF_BOILER_RETURN_TEMPERATURE),
         )
 
     @property
@@ -201,6 +219,12 @@ class EntityConfig:
             self.duty_cycle,
             self.flow_setpoint,
             self.solar_power,
+            self.relay_feedback,
+            self.burner_lock,
+            self.boiler_winter_mode,
+            self.pump,
+            self.boiler_flow_temperature,
+            self.boiler_return_temperature,
         ):
             if entity_id:
                 ids.add(entity_id)
@@ -422,6 +446,18 @@ def build_snapshot(
         else None,
         forecast_6h=control.forecast_6h,
         forecast_12h=control.forecast_12h,
+        relay_feedback=reader.binary(config.relay_feedback) if config.relay_feedback else None,
+        burner_lock=reader.number(config.burner_lock) if config.burner_lock else None,
+        boiler_winter_mode=reader.binary(config.boiler_winter_mode)
+        if config.boiler_winter_mode
+        else None,
+        pump_on=reader.binary(config.pump) if config.pump else None,
+        boiler_flow_temperature=reader.temperature(config.boiler_flow_temperature)
+        if config.boiler_flow_temperature
+        else None,
+        boiler_return_temperature=reader.temperature(config.boiler_return_temperature)
+        if config.boiler_return_temperature
+        else None,
     )
 
 

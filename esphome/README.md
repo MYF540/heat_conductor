@@ -111,6 +111,18 @@ Montage-Abweichung lässt sich danach über den Offset ausgleichen.
 | Vorlauftemperatur | `sensor.heizung_vorlauf` (DS18B20, kalibriert) |
 | Rücklauftemperatur | `sensor.heizung_rucklauf` (DS18B20, kalibriert) |
 
-Brennerstatus und Vorlauf-Soll des Kessels sind optionale Eingänge. Sie können aus dem
-Gasdurchfluss oder aus einer Kesselanbindung wie
-[esphome-vaillant-x6](https://github.com/MYF540/esphome-vaillant-x6) stammen.
+Mit der Kesselanbindung [esphome-vaillant-x6](https://github.com/MYF540/esphome-vaillant-x6)
+kommen weitere optionale Eingänge hinzu:
+
+| Feld in HeatConductor | X6-Wert | Wirkung |
+|---|---|---|
+| Sensor „Brenner aktiv“ | *Flamme* (0x05) oder *Brenner* (0x0D) | Brennerstarts, Laufzeiten, Lernen – auch ohne Gaszähler |
+| Vorlauf-Soll des Kesselreglers | *Kessel Vorlauf soll* (0x39) | Heizkurve des Einbaureglers lernen |
+| Außentemperatur-Sensoren (zusätzlich) | *Außentemperatur* (0x6A) | der Fühler, nach dem der Kessel regelt |
+| Rückmeldung Wärmeanforderung am Kessel | *Wärmeanforderung Raumthermostat* (0x0E) | Störung, wenn Relais und Kessel länger nicht übereinstimmen |
+| Brennersperrzeit des Kessels | *Brennersperrzeit* (0x38) | erklärt, warum der Brenner trotz Anforderung aus bleibt |
+| Kessel im Winterbetrieb | *Winterbetrieb* (0x08) | Störung, wenn der Kessel auf Sommer steht, aber geheizt werden soll |
+| Heizungspumpe des Kessels | *Heizungspumpe* (0x44) | Spreizung nur bei laufender Pumpe |
+| Vorlauf am Kesselfühler | *Kessel Vorlauf ist* (0x18) | Kontrolle der Rohrfühler, Spreizung am Kessel |
+| Rücklauf am Kesselfühler | – (am Testkessel nicht vorhanden) | sonst dient der Rücklauf-Rohrfühler |
+

@@ -150,6 +150,45 @@ CENTRAL_SENSORS: tuple[HeatConductorSensorDescription, ...] = (
         },
         exists_fn=lambda c: c.flow_temperature is not None and c.return_temperature is not None,
     ),
+    HeatConductorSensorDescription(
+        key="flow_deviation",
+        native_unit_of_measurement="K",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=1,
+        value_fn=lambda r: _round(r.diagnosis.flow_deviation),
+        attributes_fn=lambda r: {
+            "pipe_flow_temperature": _round(r.flow_temperature),
+            "boiler_flow_temperature": _round(r.diagnosis.boiler_flow),
+            "typical_deviation": _round(r.diagnosis.flow_deviation_typical),
+            "suspicious": r.diagnosis.flow_sensor_suspect,
+        },
+        exists_fn=lambda c: (
+            c.flow_temperature is not None and c.entities.boiler_flow_temperature is not None
+        ),
+    ),
+    HeatConductorSensorDescription(
+        key="boiler_spread",
+        native_unit_of_measurement="K",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        value_fn=lambda r: _round(r.diagnosis.boiler_spread),
+        attributes_fn=lambda r: {
+            "boiler_flow_temperature": _round(r.diagnosis.boiler_flow),
+            "return_temperature": _round(
+                r.diagnosis.boiler_return
+                if r.diagnosis.boiler_return is not None
+                else r.return_temperature
+            ),
+            "return_source": "boiler" if r.diagnosis.boiler_return is not None else "pipe",
+        },
+        exists_fn=lambda c: (
+            c.entities.boiler_flow_temperature is not None
+            and (
+                c.entities.boiler_return_temperature is not None or c.return_temperature is not None
+            )
+        ),
+    ),
     # --- Phase 2: energy and analysis ---
     HeatConductorSensorDescription(
         key="gas_volume",

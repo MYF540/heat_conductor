@@ -135,6 +135,32 @@ Erkennung lässt sich abschalten (*Konfigurieren → Urlaub*).
 - **Während eines Urlaubs lernt HeatConductor keinen Zeitplan.** Sonst würden zwei Wochen
   Abwesenheit den Anwesenheitsplan verwässern.
 
+### Rückmeldungen vom Kessel (z. B. Vaillant X6)
+
+Alle Felder sind optional unter *Zentrale Entitäten*. Mit
+[esphome-vaillant-x6](https://github.com/MYF540/esphome-vaillant-x6) liefern sie:
+
+| Feld in HeatConductor | X6-Wert | Wirkung |
+|---|---|---|
+| Sensor „Brenner aktiv“ | *Flamme* (0x05) oder *Brenner* (0x0D) | Brennerstarts, Laufzeiten, Lernen – auch ohne Gaszähler |
+| Vorlauf-Soll des Kesselreglers | *Kessel Vorlauf soll* (0x39) | Heizkurve des Einbaureglers lernen |
+| Außentemperatur-Sensoren (zusätzlich) | *Außentemperatur* (0x6A) | der Fühler, nach dem der Kessel regelt |
+| Rückmeldung Wärmeanforderung am Kessel | *Wärmeanforderung Raumthermostat* (0x0E) | Störung, wenn Relais und Kessel länger nicht übereinstimmen |
+| Brennersperrzeit des Kessels | *Brennersperrzeit* (0x38) | erklärt, warum der Brenner trotz Anforderung aus bleibt |
+| Kessel im Winterbetrieb | *Winterbetrieb* (0x08) | Störung, wenn der Kessel auf Sommer steht, aber geheizt werden soll |
+| Heizungspumpe des Kessels | *Heizungspumpe* (0x44) | Spreizung nur bei laufender Pumpe |
+| Vorlauf am Kesselfühler | *Kessel Vorlauf ist* (0x18) | Kontrolle der Rohrfühler, Spreizung am Kessel |
+| Rücklauf am Kesselfühler | – (am Testkessel nicht vorhanden) | sonst dient der Rücklauf-Rohrfühler |
+
+**Rohrfühler und Kesselfühler:** Die Anlegefühler sitzen hinter der Umwälzpumpe am Rohr, ein
+gleichbleibender Unterschied zum Kesselfühler ist daher normal. HeatConductor lernt ihn bei
+laufender Pumpe (Sensor *Vorlauf-Abweichung zum Kessel*, Attribut „üblich“) und meldet nur, wenn
+der Rohrfühler länger als 30 min mehr als 5 K davon abweicht – etwa bei einem abgerutschten Fühler.
+*Spreizung am Kessel* rechnet mit dem Kesselvorlauf und dem Rücklauf-Rohrfühler, falls der Kessel
+keinen eigenen Rücklauffühler hat; die bisherige *Spreizung* bleibt die der beiden Rohrfühler.
+
+Relais-Rückmeldung und Sommerbetrieb erscheinen als Störung und nach 5 min als Reparaturhinweis.
+
 ### Relais-Watchdog (Shelly)
 
 Das Skript [shelly/heatconductor_watchdog.js](shelly/heatconductor_watchdog.js) läuft auf dem
@@ -204,7 +230,8 @@ Kessel-ESP mit Vor-/Rücklauf: siehe [esphome/README.md](esphome/README.md). Vai
 | Raumsteuerung | an = Solltemperaturen werden an Thermostate geschrieben |
 | Wärmeanforderung, Brenner aktiv | Entscheidung „Kessel an“ und tatsächlicher Brennerbetrieb |
 | Kesselstatus, Entscheidungsgrund | Zustand und Grund (Attribute: Restzeit, Räume) |
-| Störung, Relais-Watchdog | Sicherheitsabschaltung/fehlende Daten, Erreichbarkeit des Watchdogs |
+| Störung, Relais-Watchdog | Sicherheitsabschaltung/fehlende Daten, Relais-Rückmeldung, Kessel im Sommerbetrieb, Erreichbarkeit des Watchdogs |
+| Vorlauf-Abweichung zum Kessel, Spreizung am Kessel | Rohrfühler gegen Kesselfühler (nur mit Kessel-Vorlauf) |
 | Gesamtbedarf | gewichteter Bedarf aller geregelten Räume |
 | Außentemperatur (geglättet, Tagesmittel, Vorhersage 12 h) | Grundlage für Heizgrenze und Vorausschau |
 | Kessel-/Brennerstarts und -laufzeit heute, Spreizung | Takt-Kontrolle |

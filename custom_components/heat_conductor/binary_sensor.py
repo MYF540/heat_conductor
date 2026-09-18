@@ -114,8 +114,16 @@ class HeatRequestSensor(HeatConductorEntity, BinarySensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Show whether the decision is only simulated."""
-        return {"observation_mode": self.coordinator.settings.observation_mode}
+        """Show whether the decision is only simulated and what the boiler reports."""
+        diagnosis = self.coordinator.data.diagnosis
+        attributes: dict[str, Any] = {
+            "observation_mode": self.coordinator.settings.observation_mode
+        }
+        if self.coordinator.entities.relay_feedback is not None:
+            attributes["boiler_sees_demand"] = diagnosis.relay_feedback
+        if self.coordinator.entities.burner_lock is not None:
+            attributes["burner_lock_minutes"] = diagnosis.burner_lock_minutes
+        return attributes
 
 
 class BurnerActiveSensor(HeatConductorEntity, BinarySensorEntity):
@@ -195,9 +203,20 @@ class ProblemSensor(HeatConductorEntity, BinarySensorEntity):
         stale = any(
             r.kind is RoomKind.REGULATED and r.status is RoomStatus.STALE for r in data.rooms
         )
-        return data.decision.state is BoilerState.FAILSAFE or stale
+        diagnosis = data.diagnosis
+        return (
+            data.decision.state is BoilerState.FAILSAFE
+            or stale
+            or diagnosis.relay_mismatch
+            or diagnosis.summer_mode_conflict
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """List affected rooms."""
-        return {"rooms_with_missing_data": self._stale_rooms()}
+        """List affected rooms and contradictions reported by the boiler."""
+        diagnosis = self.coordinator.data.diagnosis
+        return {
+            "rooms_with_missing_data": self._stale_rooms(),
+            "relay_feedback_mismatch": diagnosis.relay_mismatch,
+            "boiler_summer_mode": diagnosis.summer_mode_conflict,
+        }

@@ -11,6 +11,7 @@ from typing import Any
 
 from .boiler_fsm import BoilerController, BoilerDecision, BoilerInputs
 from .demand import DemandSummary, RoomDemand, RoomInput, evaluate_room, summarize
+from .diagnosis import BoilerDiagnosis, DiagnosisTracker
 from .energy import EnergyParams, EnergySnapshot, EnergyTracker
 from .learning import Learner
 from .models import ControlParams, OperatingMode, Reading, RoomKind, RoomStatus
@@ -73,6 +74,12 @@ class EngineSnapshot:
     solar_power: Reading | None = None
     forecast_6h: float | None = None
     forecast_12h: float | None = None
+    relay_feedback: bool | None = None
+    burner_lock: Reading | None = None
+    boiler_winter_mode: bool | None = None
+    pump_on: bool | None = None
+    boiler_flow_temperature: Reading | None = None
+    boiler_return_temperature: Reading | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +109,7 @@ class EngineResult:
     forecast_6h: float | None = None
     forecast_12h: float | None = None
     manual_overrides: tuple[str, ...] = field(default=())
+    diagnosis: BoilerDiagnosis = field(default_factory=BoilerDiagnosis)
 
     def room(self, room_id: str) -> RoomDemand | None:
         """Return the evaluated room with the given id."""
@@ -128,6 +136,7 @@ class HeatingEngine:
         self.solar_reference = solar_reference
         self.vacation_params = vacation_params or VacationParams()
         self.auto_vacation = AutoVacation()
+        self.diagnosis = DiagnosisTracker()
         self.boiler = BoilerController(params)
         self.outdoor_smoother = ExponentialSmoother(params.outdoor_smoothing)
         self.boiler_stats = DailyRuntime()
@@ -312,6 +321,32 @@ class HeatingEngine:
         )
         burner = energy.burner_active
         has_burner_source = snap.burner_on is not None or energy.has_gas_source
+        boiler_flow = (
+            snap.boiler_flow_temperature.valid_value(now, p.stale_after)
+            if snap.boiler_flow_temperature
+            else None
+        )
+        boiler_return = (
+            snap.boiler_return_temperature.valid_value(now, p.stale_after)
+            if snap.boiler_return_temperature
+            else None
+        )
+        diagnosis = self.diagnosis.update(
+            now,
+            relay_on=snap.relay_on,
+            relay_feedback=snap.relay_feedback,
+            request_heat=decision.request_heat,
+            burner_on=burner,
+            burner_lock=snap.burner_lock.valid_value(now, p.stale_after)
+            if snap.burner_lock
+            else None,
+            winter_mode=snap.boiler_winter_mode,
+            pump_on=snap.pump_on,
+            pipe_flow=flow,
+            pipe_return=ret,
+            boiler_flow=boiler_flow,
+            boiler_return=boiler_return,
+        )
 
         # Learning needs real heat: the burner, or the relay when HeatConductor controls it.
         heating = (
@@ -380,7 +415,10 @@ class HeatingEngine:
             decision=decision,
             flow_temperature=flow,
             return_temperature=ret,
-            spread=flow - ret if flow is not None and ret is not None else None,
+            # Without circulation the spread only shows how pipes cool down.
+            spread=flow - ret
+            if flow is not None and ret is not None and snap.pump_on is not False
+            else None,
             burner_active=burner,
             boiler_stats=self.boiler_stats.update(now, decision.request_heat),
             burner_stats=self.burner_stats.update(now, burner) if has_burner_source else None,
@@ -396,6 +434,7 @@ class HeatingEngine:
             forecast_6h=snap.forecast_6h,
             forecast_12h=snap.forecast_12h,
             manual_overrides=tuple(manual),
+            diagnosis=diagnosis,
         )
 
     # -- persistence --------------------------------------------------------
@@ -416,6 +455,7 @@ class HeatingEngine:
             "rooms": {room_id: runtime.to_dict() for room_id, runtime in self.room_runtime.items()},
             "learning": self.learner.to_dict(),
             "auto_vacation": self.auto_vacation.to_dict(),
+            "diagnosis": self.diagnosis.to_dict(),
         }
 
     def restore(self, data: dict[str, Any]) -> None:
@@ -438,6 +478,7 @@ class HeatingEngine:
         }
         self.learner = Learner.from_dict(data.get("learning"))
         self.auto_vacation = AutoVacation.from_dict(data.get("auto_vacation"))
+        self.diagnosis.restore(data.get("diagnosis"))
 
 
 def _room_temperature(room: RoomInput, now: datetime, max_age: timedelta) -> float | None:

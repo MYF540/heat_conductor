@@ -18,7 +18,13 @@
           "presence_entities": "Presence",
           "duty_cycle_sensor": "Radio duty cycle sensor",
           "flow_setpoint_sensor": "Flow setpoint of the boiler controller",
-          "solar_power_sensor": "Solar power"
+          "solar_power_sensor": "Solar power",
+          "relay_feedback": "Heat demand feedback from the boiler",
+          "burner_lock_sensor": "Boiler burner lock time (min)",
+          "boiler_winter_mode": "Boiler in winter mode",
+          "pump_sensor": "Boiler heating pump",
+          "boiler_flow_temperature": "Flow at the boiler sensor",
+          "boiler_return_temperature": "Return at the boiler sensor"
         },
         "data_description": {
           "boiler_switch": "Switch that releases the boiler (e.g. Shelly on terminals 3-4). Optional during observation.",
@@ -30,7 +36,13 @@
           "presence_entities": "Persons, device trackers or switches. If nobody is home, rooms use their eco temperature.",
           "duty_cycle_sensor": "e.g. the duty cycle of the HomematicIP access point. Thermostat writes pause above the limit.",
           "flow_setpoint_sensor": "Optional, e.g. from boiler diagnostics (X6). Used to learn the heating curve.",
-          "solar_power_sensor": "Optional PV power as a proxy for solar gains in rooms with large glass areas."
+          "solar_power_sensor": "Optional PV power as a proxy for solar gains in rooms with large glass areas.",
+          "relay_feedback": "What the boiler sees at its room thermostat input (terminals 3-4-5), e.g. X6 address 0x0E. If it differs from the relay for a while, HeatConductor reports a problem.",
+          "burner_lock_sensor": "Remaining anti-cycling time of the boiler, e.g. X6 address 0x38. Explains why the burner stays off despite a request.",
+          "boiler_winter_mode": "On when the boiler has heating enabled, e.g. X6 address 0x08. If it is in summer mode while heating is needed, HeatConductor reports it.",
+          "pump_sensor": "E.g. X6 address 0x44. Without a running pump no spread is shown.",
+          "boiler_flow_temperature": "The boiler's own flow sensor, e.g. X6 address 0x18. Cross-checks the pipe sensors; a constant difference is normal and is learned.",
+          "boiler_return_temperature": "Only if the boiler has its own return sensor. Otherwise the pipe return sensor is used for the boiler spread."
         }
       }
     },
@@ -70,7 +82,13 @@
           "presence_entities": "Presence",
           "duty_cycle_sensor": "Radio duty cycle sensor",
           "flow_setpoint_sensor": "Flow setpoint of the boiler controller",
-          "solar_power_sensor": "Solar power"
+          "solar_power_sensor": "Solar power",
+          "relay_feedback": "Heat demand feedback from the boiler",
+          "burner_lock_sensor": "Boiler burner lock time (min)",
+          "boiler_winter_mode": "Boiler in winter mode",
+          "pump_sensor": "Boiler heating pump",
+          "boiler_flow_temperature": "Flow at the boiler sensor",
+          "boiler_return_temperature": "Return at the boiler sensor"
         },
         "data_description": {
           "gas_meter": "Cumulative meter reading, e.g. the total of an ESPHome pulse counter. More accurate than integrating the flow.",
@@ -79,7 +97,13 @@
           "presence_entities": "Persons, device trackers or switches. If nobody is home, rooms use their eco temperature.",
           "duty_cycle_sensor": "e.g. the duty cycle of the HomematicIP access point. Thermostat writes pause above the limit.",
           "flow_setpoint_sensor": "Optional, e.g. from boiler diagnostics (X6). Used to learn the heating curve.",
-          "solar_power_sensor": "Optional PV power as a proxy for solar gains in rooms with large glass areas."
+          "solar_power_sensor": "Optional PV power as a proxy for solar gains in rooms with large glass areas.",
+          "relay_feedback": "What the boiler sees at its room thermostat input (terminals 3-4-5), e.g. X6 address 0x0E. If it differs from the relay for a while, HeatConductor reports a problem.",
+          "burner_lock_sensor": "Remaining anti-cycling time of the boiler, e.g. X6 address 0x38. Explains why the burner stays off despite a request.",
+          "boiler_winter_mode": "On when the boiler has heating enabled, e.g. X6 address 0x08. If it is in summer mode while heating is needed, HeatConductor reports it.",
+          "pump_sensor": "E.g. X6 address 0x44. Without a running pump no spread is shown.",
+          "boiler_flow_temperature": "The boiler's own flow sensor, e.g. X6 address 0x18. Cross-checks the pipe sensors; a constant difference is normal and is learned.",
+          "boiler_return_temperature": "Only if the boiler has its own return sensor. Otherwise the pipe return sensor is used for the boiler spread."
         }
       },
       "parameters": {
@@ -434,6 +458,12 @@
       },
       "room_cooling_tau": {
         "name": "Learned cooling time constant"
+      },
+      "flow_deviation": {
+        "name": "Flow deviation from boiler"
+      },
+      "boiler_spread": {
+        "name": "Boiler spread"
       }
     },
     "switch": {
@@ -479,6 +509,14 @@
     "watchdog_unreachable": {
       "title": "Relay watchdog unreachable",
       "description": "Heartbeats to the relay watchdog have been failing for several minutes. The relay will switch the boiler off. Check the Shelly script and the URL."
+    },
+    "relay_feedback_mismatch": {
+      "title": "Boiler does not see the heat demand",
+      "description": "The boiler relay and the feedback from the boiler have disagreed for several minutes. Check the wiring at terminals 3-4-5 and the relay."
+    },
+    "boiler_summer_mode": {
+      "title": "Boiler is in summer mode",
+      "description": "HeatConductor requests heat, but the boiler has heating switched off. Set the boiler or its built-in controller to winter mode."
     }
   },
   "services": {

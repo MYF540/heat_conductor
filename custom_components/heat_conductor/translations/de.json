@@ -18,7 +18,13 @@
           "presence_entities": "Anwesenheit",
           "duty_cycle_sensor": "Sensor Funk-Duty-Cycle",
           "flow_setpoint_sensor": "Vorlauf-Soll des Kesselreglers",
-          "solar_power_sensor": "PV-Leistung"
+          "solar_power_sensor": "PV-Leistung",
+          "relay_feedback": "Rückmeldung Wärmeanforderung am Kessel",
+          "burner_lock_sensor": "Brennersperrzeit des Kessels (min)",
+          "boiler_winter_mode": "Kessel im Winterbetrieb",
+          "pump_sensor": "Heizungspumpe des Kessels",
+          "boiler_flow_temperature": "Vorlauf am Kesselfühler",
+          "boiler_return_temperature": "Rücklauf am Kesselfühler"
         },
         "data_description": {
           "boiler_switch": "Schalter, der den Kessel freigibt (z. B. Shelly an Klemme 3-4). Im Beobachtungsmodus optional.",
@@ -30,7 +36,13 @@
           "presence_entities": "Personen, Geräte-Tracker oder Schalter. Ist niemand zu Hause, nutzen die Räume ihre Eco-Temperatur.",
           "duty_cycle_sensor": "z. B. Duty Cycle des HomematicIP Access Points. Über dem Grenzwert pausieren Schreibvorgänge an Thermostate.",
           "flow_setpoint_sensor": "Optional, z. B. aus der Kesseldiagnose (X6). Dient zum Lernen der Heizkurve.",
-          "solar_power_sensor": "Optionale PV-Leistung als Maß für Sonnengewinne in Räumen mit großen Glasflächen."
+          "solar_power_sensor": "Optionale PV-Leistung als Maß für Sonnengewinne in Räumen mit großen Glasflächen.",
+          "relay_feedback": "Was der Kessel an seinem Raumthermostat-Eingang (Klemmen 3-4-5) sieht, z. B. X6-Adresse 0x0E. Weicht sie länger vom Relais ab, meldet HeatConductor eine Störung.",
+          "burner_lock_sensor": "Restliche Takt-Sperrzeit des Kessels, z. B. X6-Adresse 0x38. Erklärt, warum der Brenner trotz Anforderung aus bleibt.",
+          "boiler_winter_mode": "An, wenn der Kessel Heizbetrieb freigegeben hat, z. B. X6-Adresse 0x08. Steht er auf Sommer, während geheizt werden soll, meldet HeatConductor das.",
+          "pump_sensor": "Z. B. X6-Adresse 0x44. Ohne laufende Pumpe wird keine Spreizung angezeigt.",
+          "boiler_flow_temperature": "Der kesseleigene Vorlauffühler, z. B. X6-Adresse 0x18. Dient als Kontrolle der Rohrfühler; ein gleichbleibender Unterschied ist normal und wird gelernt.",
+          "boiler_return_temperature": "Nur falls der Kessel einen eigenen Rücklauffühler hat. Sonst wird für die Kessel-Spreizung der Rücklauf-Rohrfühler verwendet."
         }
       }
     },
@@ -70,7 +82,13 @@
           "presence_entities": "Anwesenheit",
           "duty_cycle_sensor": "Sensor Funk-Duty-Cycle",
           "flow_setpoint_sensor": "Vorlauf-Soll des Kesselreglers",
-          "solar_power_sensor": "PV-Leistung"
+          "solar_power_sensor": "PV-Leistung",
+          "relay_feedback": "Rückmeldung Wärmeanforderung am Kessel",
+          "burner_lock_sensor": "Brennersperrzeit des Kessels (min)",
+          "boiler_winter_mode": "Kessel im Winterbetrieb",
+          "pump_sensor": "Heizungspumpe des Kessels",
+          "boiler_flow_temperature": "Vorlauf am Kesselfühler",
+          "boiler_return_temperature": "Rücklauf am Kesselfühler"
         },
         "data_description": {
           "gas_meter": "Fortlaufender Zählerstand, z. B. der Gesamtwert eines ESPHome-Impulszählers. Genauer als das Aufsummieren des Durchflusses.",
@@ -79,7 +97,13 @@
           "presence_entities": "Personen, Geräte-Tracker oder Schalter. Ist niemand zu Hause, nutzen die Räume ihre Eco-Temperatur.",
           "duty_cycle_sensor": "z. B. Duty Cycle des HomematicIP Access Points. Über dem Grenzwert pausieren Schreibvorgänge an Thermostate.",
           "flow_setpoint_sensor": "Optional, z. B. aus der Kesseldiagnose (X6). Dient zum Lernen der Heizkurve.",
-          "solar_power_sensor": "Optionale PV-Leistung als Maß für Sonnengewinne in Räumen mit großen Glasflächen."
+          "solar_power_sensor": "Optionale PV-Leistung als Maß für Sonnengewinne in Räumen mit großen Glasflächen.",
+          "relay_feedback": "Was der Kessel an seinem Raumthermostat-Eingang (Klemmen 3-4-5) sieht, z. B. X6-Adresse 0x0E. Weicht sie länger vom Relais ab, meldet HeatConductor eine Störung.",
+          "burner_lock_sensor": "Restliche Takt-Sperrzeit des Kessels, z. B. X6-Adresse 0x38. Erklärt, warum der Brenner trotz Anforderung aus bleibt.",
+          "boiler_winter_mode": "An, wenn der Kessel Heizbetrieb freigegeben hat, z. B. X6-Adresse 0x08. Steht er auf Sommer, während geheizt werden soll, meldet HeatConductor das.",
+          "pump_sensor": "Z. B. X6-Adresse 0x44. Ohne laufende Pumpe wird keine Spreizung angezeigt.",
+          "boiler_flow_temperature": "Der kesseleigene Vorlauffühler, z. B. X6-Adresse 0x18. Dient als Kontrolle der Rohrfühler; ein gleichbleibender Unterschied ist normal und wird gelernt.",
+          "boiler_return_temperature": "Nur falls der Kessel einen eigenen Rücklauffühler hat. Sonst wird für die Kessel-Spreizung der Rücklauf-Rohrfühler verwendet."
         }
       },
       "parameters": {
@@ -434,6 +458,12 @@
       },
       "room_cooling_tau": {
         "name": "Gelernte Auskühl-Zeitkonstante"
+      },
+      "flow_deviation": {
+        "name": "Vorlauf-Abweichung zum Kessel"
+      },
+      "boiler_spread": {
+        "name": "Spreizung am Kessel"
       }
     },
     "switch": {
@@ -479,6 +509,14 @@
     "watchdog_unreachable": {
       "title": "Relais-Watchdog nicht erreichbar",
       "description": "Die Heartbeats an den Relais-Watchdog schlagen seit mehreren Minuten fehl. Das Relais schaltet den Kessel ab. Prüfe das Shelly-Skript und die URL."
+    },
+    "relay_feedback_mismatch": {
+      "title": "Kessel sieht die Wärmeanforderung nicht",
+      "description": "Das Kessel-Relais und die Rückmeldung des Kessels stimmen seit mehreren Minuten nicht überein. Prüfe die Verdrahtung an den Klemmen 3-4-5 und das Relais."
+    },
+    "boiler_summer_mode": {
+      "title": "Kessel steht auf Sommerbetrieb",
+      "description": "HeatConductor fordert Wärme an, der Kessel hat den Heizbetrieb aber abgeschaltet. Stelle den Kessel oder den Einbauregler auf Winterbetrieb."
     }
   },
   "services": {

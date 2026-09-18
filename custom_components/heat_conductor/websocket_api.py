@@ -156,6 +156,14 @@ def build_state(hass: HomeAssistant, coordinator: HeatConductorCoordinator) -> d
                 "return_temperature": result.return_temperature,
                 "spread": result.spread,
                 "burner_active": result.burner_active,
+                "diagnosis": _jsonable(asdict(result.diagnosis)),
+                "feedback_configured": {
+                    "relay_feedback": coordinator.entities.relay_feedback is not None,
+                    "burner_lock": coordinator.entities.burner_lock is not None,
+                    "winter_mode": coordinator.entities.boiler_winter_mode is not None,
+                    "pump": coordinator.entities.pump is not None,
+                    "boiler_flow": coordinator.entities.boiler_flow_temperature is not None,
+                },
                 "boiler_stats": _jsonable(asdict(result.boiler_stats)),
                 "burner_stats": _jsonable(asdict(result.burner_stats))
                 if result.burner_stats

@@ -73,7 +73,7 @@ Die HmIP-Integration liefert je Thermostat eine Climate-Entity (Soll-/Ist-Temper
 | Außentemperatur | mehrere Zigbee-Sensoren, Wetter-Integration als Fallback |
 | Vor-/Rücklauf | ESPHome |
 | Gas | ESPHome-Impulszähler |
-| Kesseldiagnose | ESPHome über X6, eigenes Projekt [esphome-vaillant-x6](https://github.com/MYF540/esphome-vaillant-x6) (Testkessel antwortet bisher nicht) |
+| Kesseldiagnose | ESPHome über X6, eigenes Projekt [esphome-vaillant-x6](https://github.com/MYF540/esphome-vaillant-x6) (Testkessel antwortet seit 17.09.2026, Adressraum kartiert) |
 | HmIP-Funklast | Duty-Cycle-Sensor des Access Points |
 | Sonneneinstrahlung (Proxy) | Leistung einer PV-Anlage (optional) |
 | Anwesenheit | HA `person`-Entities |
@@ -380,6 +380,7 @@ hacs.json  README.md  PLAN.md  LICENSE
 | 2026-09-14 | Raumsteuerung nach Installation standardmäßig aus (eigener Schalter) |
 | 2026-09-14 | Panel als abhängigkeitsfreie Web-Component ohne Build (statt Lit/TypeScript): kein Node-Build, offline lauffähig |
 | 2026-09-14 | Was-wäre-wenn für alle Nutzer lesend erlaubt, bis 168 h; Änderungsprotokoll hält die letzten 500 Einträge |
+| 2026-09-18 | Rückmeldungen vom Kessel als optionale Eingänge (Relais-Rückmeldung, Brennersperrzeit, Winterbetrieb, Pumpe, Kesselfühler Vor-/Rücklauf); Rohrfühler werden gegen den Kesselfühler mit gelerntem Versatz geprüft |
 | 2026-09-17 | Automatischer Urlaub: 2 Tage ohne Anwesenheit startet ihn, 3 h Anwesenheit beendet ihn; währenddessen kein Lernen des Anwesenheitsplans |
 | 2026-09-17 | Nutzungsbasiertes Heizen je Raum (Geräte als Nutzungsmelder, Komfort/Eco, je Raum abschaltbar) und gelernter Anwesenheits-Zeitplan als globaler Vorschlag |
 | 2026-09-15 | X6-Anbindung in eigenes Projekt `esphome-vaillant-x6` ausgegliedert (Kessel antwortet bisher nicht, Tests dort dokumentiert); HeatConductor-ESP nur noch mit Vor-/Rücklauf |

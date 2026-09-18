@@ -36,6 +36,12 @@ CONF_PRESENCE: Final = "presence_entities"
 CONF_DUTY_CYCLE: Final = "duty_cycle_sensor"
 CONF_FLOW_SETPOINT: Final = "flow_setpoint_sensor"
 CONF_SOLAR_POWER: Final = "solar_power_sensor"
+CONF_RELAY_FEEDBACK: Final = "relay_feedback"
+CONF_BURNER_LOCK: Final = "burner_lock_sensor"
+CONF_BOILER_WINTER_MODE: Final = "boiler_winter_mode"
+CONF_PUMP_SENSOR: Final = "pump_sensor"
+CONF_BOILER_FLOW_TEMPERATURE: Final = "boiler_flow_temperature"
+CONF_BOILER_RETURN_TEMPERATURE: Final = "boiler_return_temperature"
 
 # Room subentry
 CONF_ROOM_KIND: Final = "kind"

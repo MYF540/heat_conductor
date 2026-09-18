@@ -20,8 +20,12 @@ import voluptuous as vol
 
 from .const import (
     ALL_DEFAULTS,
+    CONF_BOILER_FLOW_TEMPERATURE,
+    CONF_BOILER_RETURN_TEMPERATURE,
     CONF_BOILER_SWITCH,
+    CONF_BOILER_WINTER_MODE,
     CONF_BURNER_FLOW_THRESHOLD,
+    CONF_BURNER_LOCK,
     CONF_BURNER_MAX_POWER,
     CONF_BURNER_SENSOR,
     CONF_CALORIFIC_VALUE,
@@ -45,6 +49,8 @@ from .const import (
     CONF_OUTDOOR_SENSORS,
     CONF_OUTDOOR_SMOOTHING,
     CONF_PRESENCE,
+    CONF_PUMP_SENSOR,
+    CONF_RELAY_FEEDBACK,
     CONF_RETURN_TEMPERATURE,
     CONF_ROOM_KIND,
     CONF_ROOM_TEMPERATURE,
@@ -84,6 +90,12 @@ ENTITY_KEYS = (
     CONF_DUTY_CYCLE,
     CONF_FLOW_SETPOINT,
     CONF_SOLAR_POWER,
+    CONF_RELAY_FEEDBACK,
+    CONF_BURNER_LOCK,
+    CONF_BOILER_WINTER_MODE,
+    CONF_PUMP_SENSOR,
+    CONF_BOILER_FLOW_TEMPERATURE,
+    CONF_BOILER_RETURN_TEMPERATURE,
 )
 
 
@@ -128,6 +140,16 @@ ENTITIES_SCHEMA = vol.Schema(
         vol.Optional(CONF_DUTY_CYCLE): _entity("sensor"),
         vol.Optional(CONF_FLOW_SETPOINT): _entity("sensor", SensorDeviceClass.TEMPERATURE),
         vol.Optional(CONF_SOLAR_POWER): _entity("sensor", SensorDeviceClass.POWER),
+        vol.Optional(CONF_RELAY_FEEDBACK): _entity("binary_sensor"),
+        vol.Optional(CONF_BURNER_LOCK): _entity("sensor"),
+        vol.Optional(CONF_BOILER_WINTER_MODE): _entity("binary_sensor"),
+        vol.Optional(CONF_PUMP_SENSOR): _entity("binary_sensor"),
+        vol.Optional(CONF_BOILER_FLOW_TEMPERATURE): _entity(
+            "sensor", SensorDeviceClass.TEMPERATURE
+        ),
+        vol.Optional(CONF_BOILER_RETURN_TEMPERATURE): _entity(
+            "sensor", SensorDeviceClass.TEMPERATURE
+        ),
     }
 )
 
