@@ -43,6 +43,8 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
 **Lernen**
 - Aufheizrate je Raum (nach Außentemperatur), Auskühl-Zeitkonstante, Totzeit
 - Brennerzyklen, Heizkurve des Kesselreglers
+- **Heizkurven-Empfehlung:** aus Ventilöffnungen, Raumtemperaturen und Vorlauf entsteht je
+  Außentemperatur-Bereich ein Vorschlag für eine passendere Heizkurve des Kesselreglers
 - **Gelernter Zeitplan:** aus der Anwesenheit entsteht ein Wochenplan als Vorschlag für die
   ganze Anlage; auf Wunsch folgen ihm Räume ohne eigenen Zeitplan-Helfer
 - **Automatischer Urlaub:** ist zwei Tage niemand zu Hause, schaltet HeatConductor in den
@@ -52,7 +54,7 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
 **Panel „HeatConductor“ in der Seitenleiste**
 - *Übersicht:* Zustandsautomat, Grund, Zeitschutz, Räume, Verläufe (24 h / 7 Tage)
 - *Parameter:* jeder Parameter erklärt, mit Wirkung, Standard, Bereich; Änderungen wirken sofort
-- *Lernen:* gelernte Werte, Diagramme, Lernverlauf
+- *Lernen:* gelernte Werte, Diagramme, Lernverlauf, Heizkurven-Empfehlung
 - *Zeitplan:* Anwesenheit je Wochentag und der daraus vorgeschlagene Wochenplan
 - *Was-wäre-wenn:* aufgezeichnete Daten mit geänderten Parametern durchspielen
 - *Protokoll:* wer hat wann welchen Parameter geändert
@@ -134,6 +136,33 @@ Erkennung lässt sich abschalten (*Konfigurieren → Urlaub*).
 - Ein kurzer Besuch beendet den Urlaub nicht, weil erst die Rückkehrzeit ablaufen muss.
 - **Während eines Urlaubs lernt HeatConductor keinen Zeitplan.** Sonst würden zwei Wochen
   Abwesenheit den Anwesenheitsplan verwässern.
+
+### Heizkurven-Empfehlung
+
+Ist die Heizkurve des Kesselreglers zu hoch, drosseln die Thermostate die überschüssige Wärme
+weg: Die Ventile stehen nur halb offen, der Rücklauf ist warm, der Brenner taktet. Ist sie zu
+niedrig, werden Räume trotz offener Ventile nicht warm. HeatConductor wertet deshalb während
+**durchgehenden Brennerbetriebs** je Außentemperatur-Bereich (3 K) aus:
+
+- welcher Raum am weitesten geöffnet ist (**Engpass-Raum**) und wie weit,
+- ob er trotz offenem Ventil zu kalt bleibt,
+- welcher Vorlauf und welche Spreizung dabei anlagen.
+
+Daraus folgt über die Heizkörper-Kennlinie, welcher Vorlauf reichen würde, damit der Engpass-Raum
+seine Solltemperatur bei etwa **85 % Ventilöffnung** hält. Das Panel zeigt unter *Lernen* die
+gelernte und die empfohlene Kurve, die Änderung je Bereich und – mit der eingestellten Kurvennummer
+(*Parameter → Lernen → Eingestellte Heizkurve*, z. B. 1,4) – eine ungefähre neue Kurvennummer.
+
+- Voraussetzungen: *Vorlauf-Soll des Kesselreglers* (z. B. X6 0x39), ein Brenner-Sensor oder
+  Gaszähler, Ventilöffnungen der Räume. Vor- und Rücklauf verbessern das Ergebnis.
+- Je Bereich braucht es etwa 2 h durchgehenden Brennerbetrieb; eine Kurve (Steilheit) entsteht
+  erst, wenn mindestens zwei Bereiche vorliegen. Im Herbst gibt es also zunächst nur Werte für
+  milde Tage.
+- Räume, die die Kurve nicht bestimmen sollen (z. B. ein Wintergarten), schaltest du in den
+  Raumeinstellungen bei *Für Heizkurven-Empfehlung berücksichtigen* aus.
+- **Richtwert:** Die Ventilöffnung ist nur ein grobes Maß für die abgegebene Wärme. Kurve am
+  Regler anpassen und danach an der gelernten Kurve prüfen. HeatConductor verstellt den Regler
+  nicht selbst.
 
 ### Rückmeldungen vom Kessel (z. B. Vaillant X6)
 

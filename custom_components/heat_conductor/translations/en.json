@@ -212,13 +212,17 @@
           "optimum_start_max_lead": "Maximum optimum start lead",
           "residual_heat": "Use residual heat",
           "use_forecast": "Use weather forecast",
-          "solar_reference": "PV peak power for sun proxy"
+          "solar_reference": "PV peak power for sun proxy",
+          "curve_setting": "Heating curve set at the boiler controller",
+          "curve_target_valve": "Target valve opening of the bottleneck room"
         },
         "data_description": {
           "optimum_start": "Starts heating early enough to reach comfort temperature when the schedule begins (uses learned heat-up rates).",
           "residual_heat": "Stops the burner when all rooms are above target so the stored heat does the rest.",
           "use_forecast": "Colder forecasts can release the heating limit and start heating earlier.",
-          "solar_reference": "0 = off. Rooms with solar gains ignore their temperature deficit above 40 % of this power."
+          "solar_reference": "0 = off. Rooms with solar gains ignore their temperature deficit above 40 % of this power.",
+          "curve_setting": "The curve number at the built-in controller, e.g. 1.4. Lets the suggestion show a curve number. 0 = unknown.",
+          "curve_target_valve": "The suggestion places the curve so that the most open room is about this far open."
         }
       }
     },
@@ -247,7 +251,8 @@
             "schedule": "Schedule",
             "usage_entities": "Devices for usage detection",
             "compensation": "Correct with room sensor",
-            "solar_gain": "Room with large solar gains"
+            "solar_gain": "Room with large solar gains",
+            "curve_reference": "Consider for the heating curve suggestion"
           },
           "data_description": {
             "climates": "Climate entities of the room; their target temperature is used.",
@@ -257,7 +262,8 @@
             "schedule": "Schedule helper: on = comfort, off = eco. Without a schedule the room uses comfort.",
             "usage_entities": "TV, PC, presence sensor and the like. While one of them is on, the room counts as in use and is heated to comfort, otherwise to eco.",
             "compensation": "Adjusts the thermostat setpoint by the difference between thermostat and room sensor.",
-            "solar_gain": "Uses the PV power as a sun proxy."
+            "solar_gain": "Uses the PV power as a sun proxy.",
+            "curve_reference": "Off for rooms whose heat demand should not set the curve, e.g. a conservatory with a large glass area."
           }
         },
         "reconfigure": {
@@ -273,13 +279,15 @@
             "schedule": "Schedule",
             "usage_entities": "Devices for usage detection",
             "compensation": "Correct with room sensor",
-            "solar_gain": "Room with large solar gains"
+            "solar_gain": "Room with large solar gains",
+            "curve_reference": "Consider for the heating curve suggestion"
           },
           "data_description": {
             "schedule": "Schedule helper: on = comfort, off = eco. Without a schedule the room uses comfort.",
             "usage_entities": "TV, PC, presence sensor and the like. While one of them is on, the room counts as in use and is heated to comfort, otherwise to eco.",
             "compensation": "Adjusts the thermostat setpoint by the difference between thermostat and room sensor.",
-            "solar_gain": "Uses the PV power as a sun proxy."
+            "solar_gain": "Uses the PV power as a sun proxy.",
+            "curve_reference": "Off for rooms whose heat demand should not set the curve, e.g. a conservatory with a large glass area."
           }
         }
       },

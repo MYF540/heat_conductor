@@ -32,6 +32,7 @@ from .const import (
     CONF_CLIMATES,
     CONF_COMPENSATION,
     CONF_CONDENSING_RETURN_LIMIT,
+    CONF_CURVE_REFERENCE,
     CONF_DEFICIT_FULL_SCALE,
     CONF_DUTY_CYCLE,
     CONF_FLOW_SETPOINT,
@@ -368,6 +369,7 @@ ROOM_SCHEMA = vol.Schema(
         ),
         vol.Required(CONF_COMPENSATION, default=True): selector.BooleanSelector(),
         vol.Required(CONF_SOLAR_GAIN, default=False): selector.BooleanSelector(),
+        vol.Required(CONF_CURVE_REFERENCE, default=True): selector.BooleanSelector(),
         vol.Required(CONF_WEIGHT, default=1.0): _number(0.1, 10, 0.1),
     }
 )

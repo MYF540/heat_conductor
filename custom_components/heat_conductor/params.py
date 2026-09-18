@@ -23,6 +23,8 @@ from .const import (
     CONF_CALORIFIC_VALUE,
     CONF_COMPENSATION_MAX,
     CONF_CONDENSING_RETURN_LIMIT,
+    CONF_CURVE_SETTING,
+    CONF_CURVE_TARGET_VALVE,
     CONF_DEFAULT_COMFORT,
     CONF_DEFAULT_ECO,
     CONF_DEFICIT_FULL_SCALE,
@@ -145,6 +147,8 @@ PARAMS: tuple[ParamMeta, ...] = (
     _b(CONF_RESIDUAL_HEAT, "learning"),
     _b(CONF_USE_FORECAST, "learning"),
     _n(CONF_SOLAR_REFERENCE, "learning", "kW", 0, 100, 0.1),
+    _n(CONF_CURVE_SETTING, "learning", None, 0, 4, 0.05),
+    _n(CONF_CURVE_TARGET_VALVE, "learning", "%", 50, 100, 5),
 )
 PARAMS_BY_KEY: dict[str, ParamMeta] = {meta.key: meta for meta in PARAMS}
 GROUPS: tuple[str, ...] = tuple(dict.fromkeys(meta.group for meta in PARAMS))
@@ -246,6 +250,14 @@ def vacation_params(options: dict[str, Any]) -> VacationParams:
         enabled=bool(_value(options, CONF_AUTO_VACATION)),
         absence=timedelta(hours=float(_value(options, CONF_AUTO_VACATION_AFTER))),
         presence=timedelta(minutes=float(_value(options, CONF_AUTO_VACATION_RETURN))),
+    )
+
+
+def curve_advice_params(options: dict[str, Any]) -> tuple[float, float]:
+    """(target valve opening as a fraction, heating curve set at the controller)."""
+    return (
+        float(_value(options, CONF_CURVE_TARGET_VALVE)) / 100,
+        float(_value(options, CONF_CURVE_SETTING)),
     )
 
 

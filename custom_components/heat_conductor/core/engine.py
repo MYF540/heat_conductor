@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from .boiler_fsm import BoilerController, BoilerDecision, BoilerInputs
+from .curve_advice import CurveRoomSample
 from .demand import DemandSummary, RoomDemand, RoomInput, evaluate_room, summarize
 from .diagnosis import BoilerDiagnosis, DiagnosisTracker
 from .energy import EnergyParams, EnergySnapshot, EnergyTracker
@@ -45,6 +46,7 @@ class RoomControlInput:
     compensation: bool = True
     solar_gain: bool = False
     activity: bool | None = None  # None: the room has no activity sensors
+    curve_reference: bool = True  # counts for the heating curve suggestion
 
 
 @dataclass(frozen=True, slots=True)
@@ -366,6 +368,28 @@ class HeatingEngine:
                 window_open=room.status is RoomStatus.WINDOW_OPEN,
             )
         self.learner.boiler.update(now, burner, outdoor.value)
+        curve_rooms = {c.room_id for c in snap.room_controls if c.curve_reference}
+        self.learner.curve_advice.update(
+            now,
+            heating=heating,
+            outdoor=outdoor.value,
+            flow_setpoint=snap.flow_setpoint.valid_value(now, p.stale_after)
+            if snap.flow_setpoint
+            else None,
+            flow=flow,
+            return_temperature=ret,
+            pump_on=snap.pump_on,
+            rooms=[
+                CurveRoomSample(room.room_id, room.temperature, room.target, room.valve)
+                for room in rooms
+                if room.kind is RoomKind.REGULATED
+                and room.status is RoomStatus.OK
+                and room.temperature is not None
+                and room.target is not None
+                and room.valve is not None
+                and room.room_id in curve_rooms
+            ],
+        )
         self.learner.curve.update(
             now,
             outdoor.value,

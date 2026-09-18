@@ -46,6 +46,10 @@ async def test_state_params_and_learning(
     learning = await _call(client, {"type": "heat_conductor/learning"})
     assert learning["success"]
     assert learning["result"]["rooms"][0]["name"] == "Bad"
+    advice = learning["result"]["curve_advice"]
+    assert advice["ready"] is False
+    assert advice["target_valve"] == 0.85
+    assert advice["curve_setting"] is None
 
 
 async def test_admin_can_set_and_reset_params(

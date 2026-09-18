@@ -15,7 +15,7 @@ import voluptuous as vol
 from .const import ALL_DEFAULTS, DOMAIN
 from .coordinator import HeatConductorCoordinator
 from .core.models import RoomKind
-from .params import GROUPS, PARAMS, validate
+from .params import GROUPS, PARAMS, curve_advice_params, validate
 
 CENTRAL_HISTORY_KEYS = (
     "total_demand",
@@ -290,10 +290,11 @@ async def ws_learning(
     names = {
         room.room_id: room.name for room in coordinator.rooms if room.kind is RoomKind.REGULATED
     }
-    connection.send_result(
-        msg["id"],
-        {**coordinator.engine.learner.summary(names), "can_edit": connection.user.is_admin},
+    target_valve, curve_setting = curve_advice_params(coordinator.options)
+    summary = coordinator.engine.learner.summary(
+        names, target_valve=target_valve, curve_setting=curve_setting
     )
+    connection.send_result(msg["id"], {**summary, "can_edit": connection.user.is_admin})
 
 
 @websocket_api.require_admin

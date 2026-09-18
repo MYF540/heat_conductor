@@ -380,6 +380,7 @@ hacs.json  README.md  PLAN.md  LICENSE
 | 2026-09-14 | Raumsteuerung nach Installation standardmäßig aus (eigener Schalter) |
 | 2026-09-14 | Panel als abhängigkeitsfreie Web-Component ohne Build (statt Lit/TypeScript): kein Node-Build, offline lauffähig |
 | 2026-09-14 | Was-wäre-wenn für alle Nutzer lesend erlaubt, bis 168 h; Änderungsprotokoll hält die letzten 500 Einträge |
+| 2026-09-18 | Heizkurven-Empfehlung: Engpass-Raum je Außentemperatur-Bereich bei durchgehendem Brennerbetrieb, Ziel 85 % Ventilöffnung, Heizkörper-Exponent 1,3; nur Anzeige, keine Änderung am Regler |
 | 2026-09-18 | Rückmeldungen vom Kessel als optionale Eingänge (Relais-Rückmeldung, Brennersperrzeit, Winterbetrieb, Pumpe, Kesselfühler Vor-/Rücklauf); Rohrfühler werden gegen den Kesselfühler mit gelerntem Versatz geprüft |
 | 2026-09-17 | Automatischer Urlaub: 2 Tage ohne Anwesenheit startet ihn, 3 h Anwesenheit beendet ihn; währenddessen kein Lernen des Anwesenheitsplans |
 | 2026-09-17 | Nutzungsbasiertes Heizen je Raum (Geräte als Nutzungsmelder, Komfort/Eco, je Raum abschaltbar) und gelernter Anwesenheits-Zeitplan als globaler Vorschlag |

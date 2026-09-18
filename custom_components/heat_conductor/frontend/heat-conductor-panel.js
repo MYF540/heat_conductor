@@ -58,6 +58,16 @@ const I18N = {
     learnHistory: "Lernverlauf (Tageswerte)",
     boilerCycles: "Brennerzyklen", runs: "Laufzeiten", pauses: "Pausen",
     heatingCurve: "Heizkurve des Kesselreglers", slope: "Steilheit", flowAt0: "Vorlauf bei 0 °C",
+    curveAdvice: "Heizkurven-Empfehlung",
+    curveIntro: "Ausgewertet wird nur durchgehender Brennerbetrieb. Je Außentemperatur-Bereich bestimmt der am weitesten geöffnete Raum (Engpass), wie warm der Vorlauf sein muss. Ziel: dieser Raum hält seine Solltemperatur bei etwa {valve} Ventilöffnung.",
+    curveNotReady: "Noch nicht genug Daten: je Außentemperatur-Bereich mindestens {samples} Messungen (etwa 2 h durchgehender Brennerbetrieb).",
+    curveSetting: "Heizkurve am Regler", curveSettingSuggested: "empfohlen etwa",
+    curveShift: "Vorlauf im Mittel", curveAt0: "bei 0 °C außen",
+    curveNow: "heute", curveSuggested: "empfohlen",
+    curveBand: "Außen", curveBottleneck: "Engpass-Raum", curveValve: "Ventil", curveTooCold: "zu kalt",
+    curveRecommended: "Vorlauf-Soll empfohlen", curveChange: "Änderung",
+    curveNote: "Richtwert: am Kesselregler einstellen und danach an der gelernten Kurve prüfen, ob der Vorlauf wie empfohlen liegt. HeatConductor verstellt den Regler nicht selbst.",
+    curveLegendNow: "gelernt", curveLegendSuggested: "Empfehlung",
     notEnough: "Noch nicht genug Daten.",
     resetLearning: "Lerndaten zurücksetzen", resetRoom: "Raum zurücksetzen",
     confirmReset: "Gelernte Werte wirklich löschen?",
@@ -132,6 +142,16 @@ const I18N = {
     learnHistory: "Learning history (daily values)",
     boilerCycles: "Burner cycles", runs: "Run times", pauses: "Pauses",
     heatingCurve: "Heating curve of the boiler controller", slope: "Slope", flowAt0: "Flow at 0 °C",
+    curveAdvice: "Heating curve suggestion",
+    curveIntro: "Only steady burner operation is evaluated. Per outdoor temperature range the most open room (bottleneck) decides how warm the flow has to be. Target: this room holds its setpoint at about {valve} valve opening.",
+    curveNotReady: "Not enough data yet: at least {samples} samples per outdoor temperature range (about 2 h of steady burner operation).",
+    curveSetting: "Curve at the controller", curveSettingSuggested: "suggested about",
+    curveShift: "Flow on average", curveAt0: "at 0 °C outdoor",
+    curveNow: "now", curveSuggested: "suggested",
+    curveBand: "Outdoor", curveBottleneck: "Bottleneck room", curveValve: "Valve", curveTooCold: "too cold",
+    curveRecommended: "Suggested flow setpoint", curveChange: "Change",
+    curveNote: "Guide value: set it at the boiler controller and then check on the learned curve that the flow matches the suggestion. HeatConductor does not change the controller itself.",
+    curveLegendNow: "learned", curveLegendSuggested: "suggestion",
     notEnough: "Not enough data yet.",
     resetLearning: "Reset learning", resetRoom: "Reset room", confirmReset: "Really delete learned values?",
     simIntro: "Replays recorded inputs with the current and the draft parameters. Room temperatures stay as recorded, so starts and run times are the reliable results.",
@@ -203,6 +223,8 @@ const PARAM_TEXT = {
     auto_vacation: ["Urlaub automatisch erkennen", "Ist lange niemand zu Hause, schaltet HeatConductor selbst in den Urlaubsmodus.", null],
     auto_vacation_after: ["Urlaub starten nach", "So lange muss niemand zu Hause sein, bis der Urlaubsmodus startet.", "Der Urlaubsmodus greift später, dafür seltener versehentlich."],
     auto_vacation_return: ["Urlaub beenden nach Rückkehr", "So lange muss wieder jemand zu Hause sein, bis der Urlaubsmodus endet.", "Kurze Besuche beenden den Urlaub nicht, dafür heizt es nach der Rückkehr später an."],
+    curve_setting: ["Eingestellte Heizkurve", "Kurvennummer am Kesselregler (z. B. 1,4). Damit zeigt die Heizkurven-Empfehlung eine Kurvennummer. 0 = unbekannt.", null],
+    curve_target_valve: ["Ziel-Ventilöffnung Engpass-Raum", "Die Heizkurven-Empfehlung legt die Kurve so, dass der am weitesten geöffnete Raum etwa so weit offen ist.", "Empfiehlt eine niedrigere Kurve; Räume brauchen weiter geöffnete Ventile."],
     optimum_start: ["Optimaler Start", "Heizt früh genug, damit zum Zeitplanbeginn die Komforttemperatur erreicht ist.", null],
     optimum_start_max_lead: ["Max. Vorlaufzeit optimaler Start", "Längste Zeit, die vor Zeitplanbeginn geheizt wird.", "Früherer Start bei großem Temperaturabstand."],
     residual_heat: ["Restwärme nutzen", "Stoppt den Brenner, wenn alle Räume über Soll liegen.", null],
@@ -247,6 +269,8 @@ const PARAM_TEXT = {
     auto_vacation: ["Detect vacation automatically", "When nobody is at home for a long time, HeatConductor switches to vacation mode by itself.", null],
     auto_vacation_after: ["Start vacation after", "Nobody may be at home for this long before vacation mode starts.", "Vacation mode starts later but less often by accident."],
     auto_vacation_return: ["End vacation after return", "Somebody has to be at home this long before vacation mode ends.", "Short visits do not end the vacation, but heating starts later after the return."],
+    curve_setting: ["Heating curve set", "Curve number at the boiler controller (e.g. 1.4). Lets the heating curve suggestion show a curve number. 0 = unknown.", null],
+    curve_target_valve: ["Target valve opening of the bottleneck room", "The heating curve suggestion places the curve so that the most open room is about this far open.", "Suggests a lower curve; rooms need wider open valves."],
     optimum_start: ["Optimum start", "Heats early enough to reach comfort temperature when the schedule begins.", null],
     optimum_start_max_lead: ["Max optimum start lead", "Longest heating time before the schedule begins.", "Earlier start for large temperature gaps."],
     residual_heat: ["Use residual heat", "Stops the burner when all rooms are above target.", null],
@@ -378,7 +402,7 @@ function timeChart({ series, height = 180, yUnit = "", thresholds = [], yMin, yM
   return `<div class="chart"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">${grid.join("")}${marks.join("")}${lines.join("")}</svg><div class="legends">${legend}${yUnit ? `<span class="legend unit">${esc(yUnit)}</span>` : ""}</div></div>`;
 }
 
-function scatterChart({ points, xLabel, yLabel, line = null, height = 200 }) {
+function scatterChart({ points, xLabel, yLabel, line = null, suggestion = null, height = 200 }) {
   if (!points || !points.length) return "";
   const width = 420;
   const pad = { l: 44, r: 10, t: 10, b: 34 };
@@ -386,6 +410,13 @@ function scatterChart({ points, xLabel, yLabel, line = null, height = 200 }) {
   const ys = points.map((p) => p[1]);
   let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   if (x1 - x0 < 1e-6) { x0 -= 1; x1 += 1; }
+  // Keep both lines inside the chart.
+  for (const l of [line, suggestion]) {
+    if (!l) continue;
+    const ends = [l[0] * x0 + l[1], l[0] * x1 + l[1]];
+    y0 = Math.min(y0, ...ends);
+    y1 = Math.max(y1, ...ends);
+  }
   if (y1 - y0 < 1e-6) { y0 -= 1; y1 += 1; }
   const sx = (x) => pad.l + ((x - x0) / (x1 - x0)) * (width - pad.l - pad.r);
   const sy = (y) => pad.t + (1 - (y - y0) / (y1 - y0)) * (height - pad.t - pad.b);
@@ -394,6 +425,10 @@ function scatterChart({ points, xLabel, yLabel, line = null, height = 200 }) {
   if (line) {
     const [a, b] = line;
     fit = `<line x1="${sx(x0)}" y1="${sy(a * x0 + b)}" x2="${sx(x1)}" y2="${sy(a * x1 + b)}" class="fit"/>`;
+  }
+  if (suggestion) {
+    const [a, b] = suggestion;
+    fit += `<line x1="${sx(x0)}" y1="${sy(a * x0 + b)}" x2="${sx(x1)}" y2="${sy(a * x1 + b)}" class="fit suggestion"/>`;
   }
   const axes = [
     `<text x="${pad.l - 6}" y="${sy(y1) + 4}" class="axis" text-anchor="end">${esc(fmt(y1))}</text>`,
@@ -1008,8 +1043,14 @@ class HeatConductorPanel extends HTMLElement {
         </div>
       </div>
       <div class="card"><h2>${this.t("heatingCurve")}</h2>${curve}
-        ${scatterChart({ points: c.points, xLabel: `${this.t("outdoor")} °C`, yLabel: `${this.t("flow")} °C`, line: c.slope !== null ? [c.slope, c.flow_at_0] : null })}
-      </div>`;
+        ${scatterChart({
+          points: c.points, xLabel: `${this.t("outdoor")} °C`, yLabel: `${this.t("flow")} °C`,
+          line: c.slope !== null ? [c.slope, c.flow_at_0] : null,
+          suggestion: data.curve_advice && data.curve_advice.suggested ? [data.curve_advice.suggested.slope, data.curve_advice.suggested.flow_at_0] : null,
+        })}
+        ${data.curve_advice && data.curve_advice.suggested ? `<div class="hint"><span class="legend-swatch" style="border-color:#e53935"></span>${this.t("curveLegendNow")}<span class="legend-swatch" style="border-color:#43a047;border-top-style:dashed"></span>${this.t("curveLegendSuggested")}</div>` : ""}
+      </div>
+      ${this._renderCurveAdvice(data.curve_advice)}`;
   }
 
   _renderSchedule() {
@@ -1046,6 +1087,40 @@ class HeatConductorPanel extends HTMLElement {
         <h2>${this.t("suggestion")}</h2>
         <table><tbody>${windows}</tbody></table>
       </div>`;
+  }
+
+  _renderCurveAdvice(a) {
+    if (!a) return "";
+    const pct = (v) => fmt(v * 100, 0, "%");
+    const intro = this.t("curveIntro").replace("{valve}", pct(a.target_valve));
+    const facts = [];
+    if (a.curve_setting) {
+      facts.push([this.t("curveSetting"), a.suggested_setting ? `${fmt(a.curve_setting, 2)} → ${this.t("curveSettingSuggested")} ${fmt(a.suggested_setting, 1)}` : fmt(a.curve_setting, 2)]);
+    }
+    if (a.shift !== null) facts.push([this.t("curveShift"), fmt(a.shift, 1, "K")]);
+    if (a.current && a.suggested) {
+      facts.push([this.t("curveAt0"), `${fmt(a.suggested.flow_at_0, 1, "°C")} ${this.t("curveSuggested")} · ${fmt(a.current.flow_at_0, 1, "°C")} ${this.t("curveNow")}`]);
+    }
+    const factRows = facts.map(([k, v]) => `<div class="fact"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
+    const rows = a.bands.map((b) => `<tr>
+        <td>${fmt(b.from, 0)} … ${fmt(b.to, 0)} °C</td>
+        <td>${b.samples}${b.samples < a.min_samples ? ` / ${a.min_samples}` : ""}</td>
+        <td>${fmt(b.flow_setpoint, 1, "°C")}</td>
+        <td>${b.bottleneck ? `${esc(b.bottleneck)} (${pct(b.bottleneck_share)})` : "–"}</td>
+        <td>${pct(b.valve)}</td>
+        <td>${pct(b.too_cold_share)}</td>
+        <td>${b.recommended === null ? "–" : fmt(b.recommended, 1, "°C")}</td>
+        <td>${b.change === null ? "–" : `${b.change > 0 ? "+" : ""}${fmt(b.change, 1, "K")}`}</td>
+      </tr>`).join("");
+    const table = a.bands.length
+      ? `<div class="scroll"><table><thead><tr><th>${this.t("curveBand")}</th><th>${this.t("samples")}</th><th>${this.t("flow")}</th><th>${this.t("curveBottleneck")}</th><th>${this.t("curveValve")}</th><th>${this.t("curveTooCold")}</th><th>${this.t("curveRecommended")}</th><th>${this.t("curveChange")}</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : "";
+    return `<div class="card"><h2>${this.t("curveAdvice")}</h2>
+      <p class="hint">${esc(intro)}</p>
+      ${a.ready ? `<div class="facts">${factRows}</div>` : `<p>${esc(this.t("curveNotReady").replace("{samples}", a.min_samples))}</p>`}
+      ${table}
+      ${a.ready ? `<p class="hint">${esc(this.t("curveNote"))}</p>` : ""}
+    </div>`;
   }
 
   _renderSimulate() {
@@ -1161,6 +1236,8 @@ const STYLE = `
   .legend.unit { color: var(--secondary-text-color); }
   .range { display:flex; gap: 6px; align-items:center; margin: 8px 0; flex-wrap:wrap; }
   .hint { color: var(--secondary-text-color); font-size: 13px; }
+  .fit.suggestion { stroke: #43a047; stroke-dasharray: 6 4; }
+  .legend-swatch { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin: 0 4px 0 10px; }
   .hint.warn { color: var(--error-color, #db4437); font-weight: 500; margin-top: 4px; }
   .savebar { position: sticky; top: 56px; z-index: 1; display:flex; flex-wrap:wrap; align-items:center; gap: 8px; justify-content:flex-end; background: var(--card-background-color, #fff); border: 1px solid var(--divider-color, #ddd); border-radius: 12px; padding: 8px 12px; margin-bottom: 16px; }
   .param { display:flex; justify-content:space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--divider-color, #eee); flex-wrap: wrap; }

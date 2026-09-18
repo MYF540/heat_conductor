@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import timedelta
 
 from custom_components.heat_conductor.core.diagnosis import RELAY_FEEDBACK_DELAY
 from custom_components.heat_conductor.core.engine import HeatingEngine
@@ -47,3 +48,34 @@ def test_burner_lock_is_passed_through() -> None:
     )
     assert result.diagnosis.burner_lock_minutes == 6.0
     assert result.diagnosis.burner_locked
+
+
+def test_rooms_can_be_left_out_of_the_curve_suggestion() -> None:
+    """A room marked as not relevant never becomes the bottleneck."""
+    engine = HeatingEngine(ControlParams())
+    base = snapshot(T0, present=True)
+    control = replace(base.room_controls[0], curve_reference=False)
+    moment = T0
+    for _ in range(60):
+        engine.evaluate(
+            replace(
+                snapshot(moment, present=True),
+                room_controls=(control,),
+                burner_on=True,
+                flow_setpoint=fresh(45.0, moment),
+            )
+        )
+        moment += timedelta(minutes=1)
+    assert engine.learner.curve_advice.bands == {}
+
+    moment = T0
+    for _ in range(60):
+        engine.evaluate(
+            replace(
+                snapshot(moment, present=True),
+                burner_on=True,
+                flow_setpoint=fresh(45.0, moment),
+            )
+        )
+        moment += timedelta(minutes=1)
+    assert engine.learner.curve_advice.bands

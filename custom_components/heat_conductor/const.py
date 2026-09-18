@@ -54,6 +54,7 @@ CONF_SCHEDULE: Final = "schedule"
 CONF_COMPENSATION: Final = "compensation"
 CONF_SOLAR_GAIN: Final = "solar_gain"
 CONF_USAGE_ENTITIES: Final = "usage_entities"
+CONF_CURVE_REFERENCE: Final = "curve_reference"
 
 # Control parameters (stored in options, in user-facing units)
 CONF_START_THRESHOLD: Final = "start_threshold"
@@ -160,6 +161,8 @@ CONF_OPTIMUM_START_MAX_LEAD: Final = "optimum_start_max_lead"
 CONF_RESIDUAL_HEAT: Final = "residual_heat"
 CONF_USE_FORECAST: Final = "use_forecast"
 CONF_SOLAR_REFERENCE: Final = "solar_reference"
+CONF_CURVE_SETTING: Final = "curve_setting"
+CONF_CURVE_TARGET_VALVE: Final = "curve_target_valve"
 
 LEARNING_DEFAULTS: Final[dict[str, float | bool]] = {
     CONF_OPTIMUM_START: True,
@@ -167,6 +170,8 @@ LEARNING_DEFAULTS: Final[dict[str, float | bool]] = {
     CONF_RESIDUAL_HEAT: True,
     CONF_USE_FORECAST: True,
     CONF_SOLAR_REFERENCE: 0.0,  # kW peak, 0 = no solar proxy
+    CONF_CURVE_SETTING: 0.0,  # heating curve set at the boiler controller, 0 = unknown
+    CONF_CURVE_TARGET_VALVE: 85,  # % valve opening of the bottleneck room
 }
 
 ALL_DEFAULTS: Final[dict[str, float | bool]] = {

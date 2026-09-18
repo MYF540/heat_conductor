@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta
 import math
 from typing import Any
 
+from .curve_advice import CurveAdvisor
 from .presence import PresenceLearner
 
 SAMPLE_INTERVAL = timedelta(minutes=5)
@@ -471,6 +472,7 @@ class Learner:
         self.boiler = BoilerCycleLearner()
         self.curve = HeatingCurveLearner()
         self.presence = PresenceLearner()
+        self.curve_advice = CurveAdvisor()
 
     def room(self, room_id: str) -> RoomLearner:
         """Learner of a room (created on demand)."""
@@ -483,10 +485,13 @@ class Learner:
             self.boiler = BoilerCycleLearner()
             self.curve = HeatingCurveLearner()
             self.presence = PresenceLearner()
+            self.curve_advice = CurveAdvisor()
         else:
             self.rooms.pop(room_id, None)
 
-    def summary(self, names: dict[str, str]) -> dict[str, Any]:
+    def summary(
+        self, names: dict[str, str], *, target_valve: float = 0.85, curve_setting: float = 0.0
+    ) -> dict[str, Any]:
         """Everything for the panel."""
         return {
             "rooms": [
@@ -497,6 +502,12 @@ class Learner:
             "boiler": self.boiler.summary(),
             "heating_curve": self.curve.summary(),
             "presence": self.presence.summary(),
+            "curve_advice": self.curve_advice.summary(
+                names,
+                current=self.curve.fit(),
+                target_valve=target_valve,
+                curve_setting=curve_setting,
+            ),
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -506,6 +517,7 @@ class Learner:
             "boiler": self.boiler.to_dict(),
             "curve": self.curve.to_dict(),
             "presence": self.presence.to_dict(),
+            "curve_advice": self.curve_advice.to_dict(),
         }
 
     @classmethod
@@ -521,4 +533,5 @@ class Learner:
         learner.boiler = BoilerCycleLearner.from_dict(data.get("boiler"))
         learner.curve = HeatingCurveLearner.from_dict(data.get("curve"))
         learner.presence = PresenceLearner.from_dict(data.get("presence"))
+        learner.curve_advice = CurveAdvisor.from_dict(data.get("curve_advice"))
         return learner

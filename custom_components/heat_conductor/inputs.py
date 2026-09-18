@@ -44,6 +44,7 @@ from .const import (
     CONF_BURNER_SENSOR,
     CONF_CLIMATES,
     CONF_COMPENSATION,
+    CONF_CURVE_REFERENCE,
     CONF_DUTY_CYCLE,
     CONF_FLOW_SETPOINT,
     CONF_FLOW_TEMPERATURE,
@@ -109,6 +110,7 @@ class RoomConfig:
     compensation: bool = True
     solar_gain: bool = False
     usage_entities: tuple[str, ...] = field(default=())
+    curve_reference: bool = True
 
     @classmethod
     def from_subentry(cls, subentry: ConfigSubentry) -> RoomConfig:
@@ -127,6 +129,7 @@ class RoomConfig:
             compensation=bool(data.get(CONF_COMPENSATION, True)),
             solar_gain=bool(data.get(CONF_SOLAR_GAIN, False)),
             usage_entities=tuple(data.get(CONF_USAGE_ENTITIES, [])),
+            curve_reference=bool(data.get(CONF_CURVE_REFERENCE, True)),
         )
 
     @property
@@ -413,6 +416,7 @@ def build_snapshot(
                     compensation=room.compensation,
                     solar_gain=room.solar_gain,
                     activity=reader.activity(room.usage_entities),
+                    curve_reference=room.curve_reference,
                 )
             )
 

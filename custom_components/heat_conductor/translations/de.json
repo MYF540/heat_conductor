@@ -212,13 +212,17 @@
           "optimum_start_max_lead": "Maximale Vorlaufzeit optimaler Start",
           "residual_heat": "Restwärme nutzen",
           "use_forecast": "Wettervorhersage nutzen",
-          "solar_reference": "PV-Spitzenleistung für Sonnen-Proxy"
+          "solar_reference": "PV-Spitzenleistung für Sonnen-Proxy",
+          "curve_setting": "Eingestellte Heizkurve am Kesselregler",
+          "curve_target_valve": "Ziel-Ventilöffnung des Engpass-Raums"
         },
         "data_description": {
           "optimum_start": "Beginnt früh genug zu heizen, damit zum Zeitplanbeginn die Komforttemperatur erreicht ist (nutzt gelernte Aufheizraten).",
           "residual_heat": "Stoppt den Brenner, wenn alle Räume über dem Soll liegen, damit die gespeicherte Wärme den Rest erledigt.",
           "use_forecast": "Kältere Vorhersagen können die Heizgrenze aufheben und früher heizen lassen.",
-          "solar_reference": "0 = aus. Räume mit Sonnengewinnen ignorieren ihr Temperaturdefizit oberhalb von 40 % dieser Leistung."
+          "solar_reference": "0 = aus. Räume mit Sonnengewinnen ignorieren ihr Temperaturdefizit oberhalb von 40 % dieser Leistung.",
+          "curve_setting": "Die Kurvennummer am Einbauregler, z. B. 1,4. Damit zeigt die Empfehlung eine Kurvennummer. 0 = unbekannt.",
+          "curve_target_valve": "Die Empfehlung legt die Kurve so, dass der am weitesten geöffnete Raum etwa so weit offen ist."
         }
       }
     },
@@ -247,7 +251,8 @@
             "schedule": "Zeitplan",
             "usage_entities": "Geräte für Nutzungserkennung",
             "compensation": "Mit Raumsensor korrigieren",
-            "solar_gain": "Raum mit großen Sonnengewinnen"
+            "solar_gain": "Raum mit großen Sonnengewinnen",
+            "curve_reference": "Für Heizkurven-Empfehlung berücksichtigen"
           },
           "data_description": {
             "climates": "Climate-Entitäten des Raums; deren Solltemperatur wird verwendet.",
@@ -257,7 +262,8 @@
             "schedule": "Zeitplan-Helfer: an = Komfort, aus = Eco. Ohne Zeitplan gilt Komfort.",
             "usage_entities": "Fernseher, PC, Präsenzmelder o. Ä. Ist eines davon an, gilt der Raum als genutzt und wird auf Komfort geheizt, sonst auf Eco.",
             "compensation": "Passt den Thermostat-Sollwert um die Differenz zwischen Thermostat und Raumsensor an.",
-            "solar_gain": "Nutzt die PV-Leistung als Maß für die Sonne."
+            "solar_gain": "Nutzt die PV-Leistung als Maß für die Sonne.",
+            "curve_reference": "Aus bei Räumen, deren Wärmebedarf die Kurve nicht bestimmen soll, z. B. ein Wintergarten mit großer Glasfläche."
           }
         },
         "reconfigure": {
@@ -273,13 +279,15 @@
             "schedule": "Zeitplan",
             "usage_entities": "Geräte für Nutzungserkennung",
             "compensation": "Mit Raumsensor korrigieren",
-            "solar_gain": "Raum mit großen Sonnengewinnen"
+            "solar_gain": "Raum mit großen Sonnengewinnen",
+            "curve_reference": "Für Heizkurven-Empfehlung berücksichtigen"
           },
           "data_description": {
             "schedule": "Zeitplan-Helfer: an = Komfort, aus = Eco. Ohne Zeitplan gilt Komfort.",
             "usage_entities": "Fernseher, PC, Präsenzmelder o. Ä. Ist eines davon an, gilt der Raum als genutzt und wird auf Komfort geheizt, sonst auf Eco.",
             "compensation": "Passt den Thermostat-Sollwert um die Differenz zwischen Thermostat und Raumsensor an.",
-            "solar_gain": "Nutzt die PV-Leistung als Maß für die Sonne."
+            "solar_gain": "Nutzt die PV-Leistung als Maß für die Sonne.",
+            "curve_reference": "Aus bei Räumen, deren Wärmebedarf die Kurve nicht bestimmen soll, z. B. ein Wintergarten mit großer Glasfläche."
           }
         }
       },
