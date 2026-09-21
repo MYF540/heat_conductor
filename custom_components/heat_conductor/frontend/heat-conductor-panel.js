@@ -43,7 +43,7 @@ const I18N = {
     groups: {
       start_stop: "Start und Stopp", cycle_protection: "Takt-Schutz", heating_limit: "Heizgrenze und Frost",
       safety: "Sicherheit", sensors: "Sensorik", energy: "Energie und Gas",
-      room_control: "Raumsteuerung", usage: "Nutzungserkennung", vacation: "Urlaub",
+      room_control: "Raumsteuerung", usage: "Nutzungserkennung", sleep: "Nacht und Schlaf", vacation: "Urlaub",
       learning: "Lernen und Vorausschau",
     },
     learningIntro: "Gelernte Werte mit Anzahl der Messungen und Streuung. Werte werden erst ab 3 Messungen verwendet.",
@@ -90,6 +90,15 @@ const I18N = {
     learnedScheduleNow: "Vorschlag gerade",
     comfortNow: "Komfort", ecoNow: "Absenkung",
     weekdays: ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"],
+    nightTitle: "Nacht und Schlaf",
+    nightIntro: "Nachts gehen alle Räume auf ihre Eco-Temperatur. Ausgelöst wird das vom Nachtfenster, vom Schlafsensor oder vom gelernten Nachtfenster. Gelernt wird nur aus dem Schlafsensor.",
+    nightHeat: "Schlafen je Wochentag (dunkler = häufiger im Bett)",
+    nightWindows: "Gelerntes Nachtfenster",
+    nightState: "Jetzt", nightWindow: "Nachtfenster", nightSource: "Auslöser", nightSince: "seit",
+    nightSensor: "Schlafsensor",
+    nightSources: { none: "aus", sensor: "Schlafsensor", window: "Nachtfenster", learned: "gelerntes Fenster" },
+    sleeping: "Nachtabsenkung", awake: "Tagbetrieb", noWindow: "nicht gesetzt",
+    inBed: "im Bett", outOfBed: "nicht im Bett",
     vacationState: "Urlaub", vacationAuto: "automatisch", vacationScheduled: "geplant",
     boilerSees: "Kessel sieht Anforderung", burnerLock: "Brennersperrzeit", boilerPump: "Heizungspumpe",
     boilerSeason: "Kessel-Betriebsart", winter: "Winter", summer: "Sommer",
@@ -127,7 +136,7 @@ const I18N = {
     groups: {
       start_stop: "Start and stop", cycle_protection: "Cycle protection", heating_limit: "Heating limit and frost",
       safety: "Safety", sensors: "Sensors", energy: "Energy and gas",
-      room_control: "Room control", usage: "Usage detection", vacation: "Vacation",
+      room_control: "Room control", usage: "Usage detection", sleep: "Night and sleep", vacation: "Vacation",
       learning: "Learning and anticipation",
     },
     learningIntro: "Learned values with sample count and spread. Values are used from 3 samples on.",
@@ -172,6 +181,15 @@ const I18N = {
     learnedScheduleNow: "Suggestion right now",
     comfortNow: "Comfort", ecoNow: "Setback",
     weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+    nightTitle: "Night and sleep",
+    nightIntro: "At night all rooms go to their eco temperature. It is triggered by the night window, the sleep sensor or the learned night window. Only the sleep sensor teaches the pattern.",
+    nightHeat: "Sleeping per weekday (darker = in bed more often)",
+    nightWindows: "Learned night window",
+    nightState: "Now", nightWindow: "Night window", nightSource: "Trigger", nightSince: "since",
+    nightSensor: "Sleep sensor",
+    nightSources: { none: "off", sensor: "sleep sensor", window: "night window", learned: "learned window" },
+    sleeping: "Night setback", awake: "Day mode", noWindow: "not set",
+    inBed: "in bed", outOfBed: "out of bed",
     vacationState: "Vacation", vacationAuto: "automatic", vacationScheduled: "scheduled",
     boilerSees: "Boiler sees demand", burnerLock: "Burner lock time", boilerPump: "Heating pump",
     boilerSeason: "Boiler mode", winter: "winter", summer: "summer",
@@ -218,6 +236,9 @@ const PARAM_TEXT = {
     duty_cycle_limit: ["Duty-Cycle-Grenze", "Oberhalb keine automatischen Schreibvorgänge.", "Mehr Schreibvorgänge bei hoher Funklast."],
     force_manual_mode: ["Thermostate auf manuell stellen", "Verhindert, dass eigene Zeitprofile der Thermostate gegensteuern.", null],
     adopt_trv_changes: ["Änderungen am Thermostat übernehmen", "Von Hand verstellte Thermostate werden zur vorübergehenden Raumübersteuerung.", null],
+    sleep_confirm: ["Bestätigungszeit Einschlafen", "So lange muss der Schlafsensor Schlafen melden, bevor abgesenkt wird.", "Später absenken, dafür keine Fehlauslösung beim kurzen Hinlegen."],
+    wake_confirm: ["Bestätigungszeit Aufstehen", "So lange muss der Sensor wach melden, bevor wieder geheizt wird. Beendet die Nacht auch im Nachtfenster.", "Nächtliche Gänge beenden die Absenkung nicht, dafür heizt es morgens später an."],
+    learned_night: ["Gelerntes Nachtfenster verwenden", "Nutzt das aus dem Schlafsensor gelernte Nachtfenster, sobald genug Tage beobachtet sind.", null],
     usage_hold: ["Nachlaufzeit Nutzung", "So lange gilt ein Raum nach der letzten Aktivität noch als genutzt.", "Der Raum bleibt länger auf Komfort, weniger Takten bei kurzen Pausen."],
     usage_in_eco: ["Nutzung hebt Absenkung auf", "Ein genutzter Raum wird auch in Absenkphasen auf Komforttemperatur geheizt.", null],
     auto_vacation: ["Urlaub automatisch erkennen", "Ist lange niemand zu Hause, schaltet HeatConductor selbst in den Urlaubsmodus.", null],
@@ -264,6 +285,9 @@ const PARAM_TEXT = {
     duty_cycle_limit: ["Duty cycle limit", "No automatic writes above.", "More writes despite high radio load."],
     force_manual_mode: ["Switch thermostats to manual", "Prevents thermostat schedules from working against HeatConductor.", null],
     adopt_trv_changes: ["Adopt changes at the thermostat", "Manually turned thermostats become a temporary room override.", null],
+    sleep_confirm: ["Confirmation time for falling asleep", "How long the sleep sensor has to report sleep before the setback starts.", "Sets back later, but a short lie-down does not trigger it."],
+    wake_confirm: ["Confirmation time for getting up", "How long the sensor has to report awake before heating resumes. Also ends the night inside the night window.", "Nightly trips do not end the setback, but heating starts later in the morning."],
+    learned_night: ["Use the learned night window", "Follows the night window learned from the sleep sensor once enough days have been observed.", null],
     usage_hold: ["Usage hold time", "How long a room still counts as in use after the last activity.", "The room stays at comfort longer, less cycling during short breaks."],
     usage_in_eco: ["Usage overrides setback", "A room in use is heated to comfort during setback periods as well.", null],
     auto_vacation: ["Detect vacation automatically", "When nobody is at home for a long time, HeatConductor switches to vacation mode by itself.", null],
@@ -317,12 +341,14 @@ const SOURCE_TEXT = {
     frost_protection: "Frostschutz", vacation: "Urlaub", away: "Abwesend (Modus)", eco: "Eco (Modus)", comfort: "Komfort (Modus)",
     absent: "Niemand zu Hause", no_schedule: "Kein Zeitplan", schedule_comfort: "Zeitplan Komfort", schedule_eco: "Zeitplan Eco",
     optimum_start: "Optimaler Start", usage_active: "Raum genutzt", usage_idle: "Raum ungenutzt",
+    sleep: "Nachtabsenkung",
   },
   en: {
     window: "Window open", room_off: "Room off", boost: "Boost", override: "Manual", mode_off: "Mode off",
     frost_protection: "Frost protection", vacation: "Vacation", away: "Away (mode)", eco: "Eco (mode)", comfort: "Comfort (mode)",
     absent: "Nobody home", no_schedule: "No schedule", schedule_comfort: "Schedule comfort", schedule_eco: "Schedule eco",
     optimum_start: "Optimum start", usage_active: "Room in use", usage_idle: "Room unused",
+    sleep: "Night setback",
   },
 };
 
@@ -1086,7 +1112,41 @@ class HeatConductorPanel extends HTMLElement {
       <div class="card">
         <h2>${this.t("suggestion")}</h2>
         <table><tbody>${windows}</tbody></table>
-      </div>`;
+      </div>
+      ${this._renderNight(data.night, hhmm, days)}`;
+  }
+
+  _renderNight(night, hhmm, days) {
+    if (!night) return "";
+    const sleep = this._state && this._state.sleep;
+    const window = sleep && sleep.window && sleep.window.start !== null && sleep.window.end !== null
+      ? `${hhmm(sleep.window.start)}–${hhmm(sleep.window.end)}`
+      : this.t("noWindow");
+    const facts = [
+      [this.t("nightState"), sleep ? (sleep.sleeping ? this.t("sleeping") : this.t("awake")) : "–"],
+      [this.t("nightWindow"), window],
+      [this.t("nightSource"), sleep ? (this.t("nightSources")[sleep.source] || sleep.source) : "–"],
+      [this.t("nightSensor"), !sleep || sleep.sensor === null || sleep.sensor === undefined
+        ? "–" : sleep.sensor ? this.t("inBed") : this.t("outOfBed")],
+      [this.t("daysObserved"), `${night.days_observed} / ${night.min_days}`],
+    ].map(([k, v]) => `<div class="fact"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
+    const rows = night.windows.map((day, i) => {
+      const text = day.length
+        ? day.map((w) => `${hhmm(w.start)}–${hhmm(w.end === 1440 ? 1439 : w.end)}`).join(", ")
+        : `<span class="hint">–</span>`;
+      return `<tr><td>${esc(days[i])}</td><td>${text}</td></tr>`;
+    }).join("");
+    return `
+      <div class="card">
+        <div class="card-head"><h2>${this.t("nightTitle")}</h2></div>
+        <p>${this.t("nightIntro")}</p>
+        <div class="facts">${facts}</div>
+      </div>
+      <div class="card">
+        <h2>${this.t("nightHeat")}</h2>
+        ${presenceChart({ grid: night.grid, slotMinutes: night.slot_minutes, days })}
+      </div>
+      ${night.ready ? `<div class="card"><h2>${this.t("nightWindows")}</h2><table><tbody>${rows}</tbody></table></div>` : ""}`;
   }
 
   _renderCurveAdvice(a) {

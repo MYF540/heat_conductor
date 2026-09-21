@@ -47,6 +47,8 @@ from .const import (
     CONF_MAX_STARTS,
     CONF_MIN_PAUSE,
     CONF_MIN_RUN,
+    CONF_NIGHT_END,
+    CONF_NIGHT_START,
     CONF_OUTDOOR_SENSORS,
     CONF_OUTDOOR_SMOOTHING,
     CONF_PRESENCE,
@@ -56,6 +58,7 @@ from .const import (
     CONF_ROOM_KIND,
     CONF_ROOM_TEMPERATURE,
     CONF_SCHEDULE,
+    CONF_SLEEP_SENSOR,
     CONF_SOLAR_GAIN,
     CONF_SOLAR_POWER,
     CONF_STALE_AFTER,
@@ -185,6 +188,9 @@ ENERGY_SCHEMA = vol.Schema(
 )
 
 
+SLEEP_KEYS = (CONF_SLEEP_SENSOR, CONF_NIGHT_START, CONF_NIGHT_END)
+
+
 def _group_schema(group: str) -> vol.Schema:
     """Options form generated from the parameter metadata."""
     fields: dict[Any, Any] = {}
@@ -199,6 +205,17 @@ def _group_schema(group: str) -> vol.Schema:
                 meta.minimum, meta.maximum, meta.step, meta.unit
             )
     return vol.Schema(fields)
+
+
+SLEEP_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_SLEEP_SENSOR): _entity(
+            ["binary_sensor", "input_boolean", "switch", "device_tracker", "person"]
+        ),
+        vol.Optional(CONF_NIGHT_START): selector.TimeSelector(),
+        vol.Optional(CONF_NIGHT_END): selector.TimeSelector(),
+    }
+).extend(_group_schema("sleep").schema)
 
 
 def _validate_entities(user_input: dict[str, Any]) -> dict[str, str]:
@@ -270,6 +287,7 @@ class HeatConductorOptionsFlow(OptionsFlow):
                 "energy",
                 "room_control",
                 "usage",
+                "sleep",
                 "vacation",
                 "learning",
             ],
@@ -325,6 +343,18 @@ class HeatConductorOptionsFlow(OptionsFlow):
     async def async_step_usage(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Edit usage based heating parameters."""
         return await self._group_step("usage", user_input)
+
+    async def async_step_sleep(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Edit the night setback: sleep sensor, night window and times."""
+        if user_input is not None:
+            merged = {k: v for k, v in self.config_entry.options.items() if k not in SLEEP_KEYS}
+            merged.update({k: v for k, v in user_input.items() if v not in (None, "")})
+            return self.async_create_entry(data=merged)
+        current = {**ALL_DEFAULTS, **self.config_entry.options}
+        return self.async_show_form(
+            step_id="sleep",
+            data_schema=self.add_suggested_values_to_schema(SLEEP_SCHEMA, current),
+        )
 
     async def async_step_vacation(
         self, user_input: dict[str, Any] | None = None

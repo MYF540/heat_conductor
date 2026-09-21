@@ -34,16 +34,20 @@ from .const import (
     CONF_FROST_TEMP,
     CONF_HEATING_LIMIT,
     CONF_IMMEDIATE_DEFICIT,
+    CONF_LEARNED_NIGHT,
     CONF_MANUAL_OVERRIDE,
     CONF_MAX_FLOW_TEMPERATURE,
     CONF_MAX_STARTS,
     CONF_MIN_PAUSE,
     CONF_MIN_RUN,
+    CONF_NIGHT_END,
+    CONF_NIGHT_START,
     CONF_OPTIMUM_START,
     CONF_OPTIMUM_START_MAX_LEAD,
     CONF_OUTDOOR_SMOOTHING,
     CONF_OVERRIDE_DURATION,
     CONF_RESIDUAL_HEAT,
+    CONF_SLEEP_CONFIRM,
     CONF_SOLAR_REFERENCE,
     CONF_STALE_AFTER,
     CONF_START_CONFIRM,
@@ -53,6 +57,7 @@ from .const import (
     CONF_USAGE_IN_ECO,
     CONF_USE_FORECAST,
     CONF_VACATION_TEMP,
+    CONF_WAKE_CONFIRM,
     CONF_WINDOW_TEMP,
     CONF_WRITE_INTERVAL,
     CONF_Z_FACTOR,
@@ -60,6 +65,7 @@ from .const import (
 from .core.energy import EnergyParams
 from .core.models import ControlParams
 from .core.setpoint import SetpointParams
+from .core.sleep import SleepParams, parse_time_of_day
 from .core.vacation import VacationParams
 
 
@@ -139,6 +145,9 @@ PARAMS: tuple[ParamMeta, ...] = (
     _b(CONF_ADOPT_TRV_CHANGES, "room_control"),
     _n(CONF_USAGE_HOLD, "usage", "min", 0, 240, 5),
     _b(CONF_USAGE_IN_ECO, "usage"),
+    _n(CONF_SLEEP_CONFIRM, "sleep", "min", 0, 120, 5),
+    _n(CONF_WAKE_CONFIRM, "sleep", "min", 0, 120, 5),
+    _b(CONF_LEARNED_NIGHT, "sleep"),
     _b(CONF_AUTO_VACATION, "vacation"),
     _n(CONF_AUTO_VACATION_AFTER, "vacation", "h", 6, 336, 1),
     _n(CONF_AUTO_VACATION_RETURN, "vacation", "min", 15, 1440, 15),
@@ -241,6 +250,17 @@ def setpoint_params(options: dict[str, Any]) -> SetpointParams:
         optimum_start_max_lead=timedelta(minutes=f(CONF_OPTIMUM_START_MAX_LEAD)),
         usage_hold=timedelta(minutes=f(CONF_USAGE_HOLD)),
         usage_in_eco=bool(_value(options, CONF_USAGE_IN_ECO)),
+    )
+
+
+def sleep_params(options: dict[str, Any]) -> SleepParams:
+    """Night window, confirmation times and whether the learned night counts."""
+    return SleepParams(
+        window_start=parse_time_of_day(options.get(CONF_NIGHT_START)),
+        window_end=parse_time_of_day(options.get(CONF_NIGHT_END)),
+        confirm=timedelta(minutes=float(_value(options, CONF_SLEEP_CONFIRM))),
+        wake_confirm=timedelta(minutes=float(_value(options, CONF_WAKE_CONFIRM))),
+        use_learned=bool(_value(options, CONF_LEARNED_NIGHT)),
     )
 
 

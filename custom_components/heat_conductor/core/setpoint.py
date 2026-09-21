@@ -38,6 +38,7 @@ class SetpointSource(StrEnum):
     OPTIMUM_START = "optimum_start"
     USAGE_ACTIVE = "usage_active"
     USAGE_IDLE = "usage_idle"
+    SLEEP = "sleep"
 
 
 # Sources the usage detection may change: the automatic comfort and eco decisions.
@@ -167,6 +168,7 @@ class SetpointContext:
     dead_time: timedelta | None
     forecast_drop: bool = False
     activity: bool | None = None  # None: the room has no activity sensors
+    sleeping: bool = False  # night setback for the whole home
 
 
 @dataclass(frozen=True, slots=True)
@@ -288,6 +290,9 @@ def compute_setpoint(
         target, source = runtime.eco, SetpointSource.ECO
     elif mode is OperatingMode.COMFORT:
         target, source = runtime.comfort, SetpointSource.COMFORT
+    elif ctx.sleeping:
+        # The night beats schedule and usage, but not the modes above.
+        target, source = runtime.eco, SetpointSource.SLEEP
     elif ctx.present is False:
         target, source = runtime.eco, SetpointSource.ABSENT
     elif ctx.schedule_on is None:

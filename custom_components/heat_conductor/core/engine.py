@@ -28,6 +28,7 @@ from .setpoint import (
     compute_setpoint,
     plan_trv,
 )
+from .sleep import SleepParams, SleepState, SleepTracker
 from .stats import DailyRuntime, RuntimeSnapshot
 from .vacation import AutoVacation, VacationParams
 
@@ -82,6 +83,7 @@ class EngineSnapshot:
     pump_on: bool | None = None
     boiler_flow_temperature: Reading | None = None
     boiler_return_temperature: Reading | None = None
+    sleep_sensor: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,6 +108,7 @@ class EngineResult:
     learned_schedule_on: bool | None = None
     vacation_active: bool = False
     auto_vacation_active: bool = False
+    sleep: SleepState = field(default_factory=SleepState)
     duty_cycle_ok: bool = True
     solar_ratio: float | None = None
     forecast_6h: float | None = None
@@ -132,6 +135,7 @@ class HeatingEngine:
         setpoint_params: SetpointParams | None = None,
         solar_reference: float = 0.0,
         vacation_params: VacationParams | None = None,
+        sleep_params: SleepParams | None = None,
     ) -> None:
         self.params = params
         self.setpoint_params = setpoint_params or SetpointParams()
@@ -139,6 +143,8 @@ class HeatingEngine:
         self.vacation_params = vacation_params or VacationParams()
         self.auto_vacation = AutoVacation()
         self.diagnosis = DiagnosisTracker()
+        self.sleep_params = sleep_params or SleepParams()
+        self.sleep = SleepTracker()
         self.boiler = BoilerController(params)
         self.outdoor_smoother = ExponentialSmoother(params.outdoor_smoothing)
         self.boiler_stats = DailyRuntime()
@@ -156,6 +162,7 @@ class HeatingEngine:
         setpoint_params: SetpointParams,
         solar_reference: float,
         vacation_params: VacationParams | None = None,
+        sleep_params: SleepParams | None = None,
     ) -> None:
         """Apply changed parameters without losing state."""
         self.params = params
@@ -168,6 +175,8 @@ class HeatingEngine:
         self.solar_reference = solar_reference
         if vacation_params is not None:
             self.vacation_params = vacation_params
+        if sleep_params is not None:
+            self.sleep_params = sleep_params
 
     def runtime(self, room_id: str) -> RoomRuntime:
         """Settings and runtime state of a room (created with defaults)."""
@@ -230,9 +239,12 @@ class HeatingEngine:
 
         auto_vacation = self.auto_vacation.update(now, snap.present, self.vacation_params)
         vacation = snap.vacation_active or auto_vacation
+        sleep = self.sleep.update(now, snap.sleep_sensor, self.learner.night, self.sleep_params)
         # A vacation says nothing about everyday habits, so it is not learned.
         if not vacation and snap.mode is not OperatingMode.VACATION:
             self.learner.presence.update(now, snap.present)
+            # Only the sensor teaches the night pattern; windows must not reinforce themselves.
+            self.learner.night.update(now, self.sleep.sensor_sleeping)
         learned_on, learned_next = (
             self.learner.presence.schedule_state(now)
             if snap.learned_schedule_enabled
@@ -272,6 +284,7 @@ class HeatingEngine:
                         dead_time=learner.dead_time_value(),
                         forecast_drop=forecast_drop,
                         activity=control.activity,
+                        sleeping=sleep.sleeping,
                     ),
                     sp,
                 )
@@ -453,6 +466,7 @@ class HeatingEngine:
             learned_schedule_on=learned_on,
             vacation_active=vacation,
             auto_vacation_active=auto_vacation,
+            sleep=sleep,
             duty_cycle_ok=duty_cycle_ok,
             solar_ratio=solar_ratio,
             forecast_6h=snap.forecast_6h,
@@ -480,6 +494,7 @@ class HeatingEngine:
             "learning": self.learner.to_dict(),
             "auto_vacation": self.auto_vacation.to_dict(),
             "diagnosis": self.diagnosis.to_dict(),
+            "sleep": self.sleep.to_dict(),
         }
 
     def restore(self, data: dict[str, Any]) -> None:
@@ -503,6 +518,7 @@ class HeatingEngine:
         self.learner = Learner.from_dict(data.get("learning"))
         self.auto_vacation = AutoVacation.from_dict(data.get("auto_vacation"))
         self.diagnosis.restore(data.get("diagnosis"))
+        self.sleep.restore(data.get("sleep"))
 
 
 def _room_temperature(room: RoomInput, now: datetime, max_age: timedelta) -> float | None:

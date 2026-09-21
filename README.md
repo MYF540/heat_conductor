@@ -30,6 +30,8 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
   Modus (Aus, Frostschutz, Urlaub, Abwesend, Eco, Komfort) → Anwesenheit → Zeitplan
 - **Nutzungsbasiertes Heizen:** Räume werden nur auf Komfort geheizt, solange sie genutzt
   werden (Fernseher, PC, Präsenzmelder …); ungenutzte Räume fallen auf Eco. Je Raum abschaltbar
+- **Nachtabsenkung:** Nachtfenster, optionaler Schlafsensor und gelerntes Nachtfenster senken
+  alle Räume auf Eco, auch wenn jemand zu Hause ist
 - **Optimaler Start:** Aufheizen beginnt so früh, dass zum Zeitplanbeginn Komfort erreicht ist
 - Schreiben an Thermostate gedrosselt (Mindestabstand, Funk-Duty-Cycle), Korrektur über
   externe Raumsensoren, Übernahme von Handänderungen am Thermostat als Übersteuerung
@@ -47,6 +49,7 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
   Außentemperatur-Bereich ein Vorschlag für eine passendere Heizkurve des Kesselreglers
 - **Gelernter Zeitplan:** aus der Anwesenheit entsteht ein Wochenplan als Vorschlag für die
   ganze Anlage; auf Wunsch folgen ihm Räume ohne eigenen Zeitplan-Helfer
+- **Gelerntes Nachtfenster:** der Schlafsensor trainiert, wann üblicherweise geschlafen wird
 - **Automatischer Urlaub:** ist zwei Tage niemand zu Hause, schaltet HeatConductor in den
   Urlaubsmodus und beendet ihn drei Stunden nach der Rückkehr; währenddessen wird nicht gelernt
 - Jeder Wert mit Anzahl Messungen und Streuung
@@ -55,7 +58,7 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
 - *Übersicht:* Zustandsautomat, Grund, Zeitschutz, Räume, Verläufe (24 h / 7 Tage)
 - *Parameter:* jeder Parameter erklärt, mit Wirkung, Standard, Bereich; Änderungen wirken sofort
 - *Lernen:* gelernte Werte, Diagramme, Lernverlauf, Heizkurven-Empfehlung
-- *Zeitplan:* Anwesenheit je Wochentag und der daraus vorgeschlagene Wochenplan
+- *Zeitplan:* Anwesenheit je Wochentag, der vorgeschlagene Wochenplan und die Nachtabsenkung
 - *Was-wäre-wenn:* aufgezeichnete Daten mit geänderten Parametern durchspielen
 - *Protokoll:* wer hat wann welchen Parameter geändert
 - Alle Nutzer sehen das Panel, nur Administratoren ändern Parameter oder Lerndaten.
@@ -86,7 +89,8 @@ Home Assistant neu starten und die Integration wie oben hinzufügen.
    Geräte für die Nutzungserkennung, Gewichtung, Sensorkorrektur, Sonnengewinne.
    Räume ohne Thermostat als „Nur überwachen“.
 3. **Parameter**: im Panel unter *Parameter* oder unter *Konfigurieren* (Regelparameter,
-   Energie und Gas, Raumsteuerung, Nutzungserkennung, Urlaub, Lernen und Vorausschau).
+   Energie und Gas, Raumsteuerung, Nutzungserkennung, Nacht und Schlaf, Urlaub,
+   Lernen und Vorausschau).
 4. **Beobachten:** einige Tage die Entscheidungen im Panel mit dem echten Brennerbetrieb
    vergleichen, Parameter anpassen (die Was-wäre-wenn-Simulation hilft dabei).
 5. **Raumsteuerung einschalten** (Schalter *Raumsteuerung*): HeatConductor schreibt ab jetzt
@@ -122,6 +126,28 @@ gilt für die ganze Anlage.
 
 Mit dem Schalter *Gelernter Zeitplan* folgen ihm alle Räume **ohne eigenen Zeitplan-Helfer**;
 ein konfigurierter Zeitplan-Helfer hat immer Vorrang.
+
+### Nachtabsenkung
+
+Nachts ist man zu Hause, trotzdem soll die Heizung meist absenken. Das entscheidest du unter
+*Konfigurieren → Nacht und Schlaf*. Drei Auslöser, einer genügt:
+
+| Auslöser | Wirkung |
+|---|---|
+| **Nachtfenster** (z. B. 23:00 bis 06:30) | gilt fest, auch über Mitternacht und auch wenn jemand wach ist |
+| **Schlafsensor** (optional) | Bettsensor o. Ä.; senkt nach der **Bestätigungszeit** ab (Standard 20 min) |
+| **Gelerntes Nachtfenster** | aus dem Schlafsensor gelernt, je Wochentag und halber Stunde |
+
+Während der Nacht gehen alle Räume auf ihre **Eco-Temperatur**, der Grund heißt *Nachtabsenkung*.
+
+- **Aufstehen:** Meldet der Schlafsensor für die **Aufwachzeit** (Standard 15 min) wach, endet die
+  Nacht sofort, auch mitten im Nachtfenster. Ein kurzer nächtlicher Gang beendet sie nicht.
+- **Vorrang:** Fenster offen, Raum aus, Boost, manuelle Übersteuerung und der Modus *Komfort*
+  stechen die Nachtabsenkung. Die Nutzungserkennung dagegen nicht: Der laufende Fernseher hebt
+  die Absenkung nicht auf.
+- **Lernen:** Nur der Schlafsensor trainiert das Nachtraster, nicht die Fenster. Im Urlaub wird
+  nicht gelernt. Der Reiter *Zeitplan* zeigt das Raster und die gelernten Nachtfenster.
+- Die Entität *Schlafen* zeigt, ob gerade abgesenkt wird und welcher Auslöser greift.
 
 ### Automatischer Urlaub
 
@@ -272,6 +298,7 @@ Kessel-ESP mit Vor-/Rücklauf: siehe [esphome/README.md](esphome/README.md). Vai
 | je Raum: Nutzungserkennung, Raum genutzt | nur bei konfigurierten Geräten zur Nutzungserkennung |
 | Gelernter Zeitplan | an = Räume ohne Zeitplan-Helfer folgen dem gelernten Anwesenheitsplan |
 | Urlaub | Urlaub aktiv (Attribute: geplant oder automatisch, seit wann, niemand zu Hause seit) |
+| Schlafen | Nachtabsenkung aktiv (Attribute: Auslöser, seit wann, Zustand des Schlafsensors) |
 | je Raum: gelernte Aufheizrate, gelernte Auskühl-Zeitkonstante | Diagnose |
 
 ## Entwicklung

@@ -1,9 +1,9 @@
-"""Learns when somebody is at home and suggests a weekly comfort schedule.
+"""Weekly patterns learned from one yes/no observation per evaluation.
 
-One observation per evaluation is decimated to a fixed sampling interval and
-averaged per weekday and half-hour slot. The result is a probability grid that
-the panel shows and from which comfort windows are derived. The suggestion is
-only offered once enough days have been observed.
+Observations are decimated to a fixed sampling interval and averaged per weekday
+and half-hour slot. The result is a probability grid that the panel shows and
+from which windows are derived (comfort periods, night periods). A pattern is
+only used once enough days have been observed.
 """
 
 from __future__ import annotations
@@ -28,8 +28,13 @@ def slot_of(moment: datetime) -> tuple[int, int]:
     return moment.weekday(), (moment.hour * 60 + moment.minute) // SLOT_MINUTES
 
 
-class PresenceLearner:
-    """Probability of somebody being at home per weekday and half hour."""
+class WeeklyPattern:
+    """Probability of a yes/no observation per weekday and half hour."""
+
+    min_days: int = MIN_DAYS
+    threshold: float = PRESENT_THRESHOLD
+    min_window: timedelta = MIN_WINDOW
+    merge_gap: timedelta = MERGE_GAP
 
     def __init__(self) -> None:
         self.grid: list[list[float]] = [[0.0] * SLOTS_PER_DAY for _ in range(DAYS)]
@@ -40,9 +45,9 @@ class PresenceLearner:
 
     # -- learning ----------------------------------------------------------
 
-    def update(self, now: datetime, present: bool | None) -> None:
-        """Add one observation (ignored without presence information)."""
-        if present is None:
+    def update(self, now: datetime, value: bool | None) -> None:
+        """Add one observation (ignored without information)."""
+        if value is None:
             return
         if self._last_sample is not None and now - self._last_sample < SAMPLE_INTERVAL:
             return
@@ -54,26 +59,27 @@ class PresenceLearner:
         day, slot = slot_of(now)
         self.counts[day][slot] += 1
         alpha = max(1.0 / self.counts[day][slot], MIN_ALPHA)
-        self.grid[day][slot] += alpha * (float(present) - self.grid[day][slot])
+        self.grid[day][slot] += alpha * (float(value) - self.grid[day][slot])
 
-    # -- suggestion --------------------------------------------------------
+    # -- windows -----------------------------------------------------------
 
     @property
     def ready(self) -> bool:
-        """Whether enough days have been observed for a suggestion."""
-        return self.days_observed >= MIN_DAYS and all(
+        """Whether enough days have been observed."""
+        return self.days_observed >= self.min_days and all(
             any(count > 0 for count in day) for day in self.counts
         )
 
-    def windows(self, threshold: float = PRESENT_THRESHOLD) -> list[list[tuple[int, int]]]:
-        """Suggested comfort windows per weekday as (start minute, end minute)."""
-        merge = int(MERGE_GAP.total_seconds() // 60)
-        minimum = int(MIN_WINDOW.total_seconds() // 60)
+    def windows(self, threshold: float | None = None) -> list[list[tuple[int, int]]]:
+        """Windows per weekday as (start minute, end minute)."""
+        limit = self.threshold if threshold is None else threshold
+        merge = int(self.merge_gap.total_seconds() // 60)
+        minimum = int(self.min_window.total_seconds() // 60)
         result: list[list[tuple[int, int]]] = []
         for day in range(DAYS):
             blocks: list[tuple[int, int]] = []
             for slot in range(SLOTS_PER_DAY):
-                if self.counts[day][slot] == 0 or self.grid[day][slot] < threshold:
+                if self.counts[day][slot] == 0 or self.grid[day][slot] < limit:
                     continue
                 start = slot * SLOT_MINUTES
                 end = start + SLOT_MINUTES
@@ -85,7 +91,7 @@ class PresenceLearner:
         return result
 
     def schedule_state(self, now: datetime) -> tuple[bool | None, datetime | None]:
-        """(comfort now, next comfort start) following the suggestion."""
+        """(inside a window now, next window start)."""
         if not self.ready:
             return None, None
         windows = self.windows()
@@ -108,8 +114,8 @@ class PresenceLearner:
             "ready": self.ready,
             "days_observed": self.days_observed,
             "slot_minutes": SLOT_MINUTES,
-            "min_days": MIN_DAYS,
-            "threshold": PRESENT_THRESHOLD,
+            "min_days": self.min_days,
+            "threshold": self.threshold,
             "grid": [
                 [
                     round(value, 3) if count else None
@@ -134,25 +140,29 @@ class PresenceLearner:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any] | None) -> PresenceLearner:
+    def from_dict(cls, data: dict[str, Any] | None):  # type: ignore[no-untyped-def]
         """Restore."""
-        learner = cls()
+        pattern = cls()
         if not data:
-            return learner
+            return pattern
         grid = data.get("grid")
         counts = data.get("counts")
         if _is_grid(grid) and _is_grid(counts):
-            learner.grid = [[float(v) for v in day] for day in grid]
-            learner.counts = [[int(v) for v in day] for day in counts]
+            pattern.grid = [[float(v) for v in day] for day in grid]
+            pattern.counts = [[int(v) for v in day] for day in counts]
         observed = data.get("days_observed")
-        learner.days_observed = int(observed) if isinstance(observed, int) else 0
+        pattern.days_observed = int(observed) if isinstance(observed, int) else 0
         last = data.get("last_date")
         if isinstance(last, str):
             try:
-                learner._last_date = date.fromisoformat(last)
+                pattern._last_date = date.fromisoformat(last)
             except ValueError:
-                learner._last_date = None
-        return learner
+                pattern._last_date = None
+        return pattern
+
+
+class PresenceLearner(WeeklyPattern):
+    """Probability of somebody being at home per weekday and half hour."""
 
 
 def _is_grid(value: Any) -> bool:

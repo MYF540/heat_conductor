@@ -63,6 +63,7 @@
           "energy": "Energy and gas",
           "room_control": "Room control",
           "usage": "Usage detection",
+          "sleep": "Night and sleep",
           "vacation": "Vacation",
           "learning": "Learning and anticipation"
         }
@@ -190,6 +191,26 @@
         "data_description": {
           "usage_hold": "How long a room still counts as in use after the last activity.",
           "usage_in_eco": "A room in use is heated to comfort temperature during setback periods as well."
+        }
+      },
+      "sleep": {
+        "title": "Night and sleep",
+        "description": "At night HeatConductor sets all rooms back to their eco temperature, even while somebody is at home. It is triggered by the night window, the sleep sensor or the learned night window. Open windows, boost, manual override and the comfort mode still take precedence.",
+        "data": {
+          "sleep_sensor": "Sleep sensor",
+          "night_start": "Night window from",
+          "night_end": "Night window to",
+          "sleep_confirm": "Confirmation time for falling asleep",
+          "wake_confirm": "Confirmation time for getting up",
+          "learned_night": "Use the learned night window"
+        },
+        "data_description": {
+          "sleep_sensor": "Bed sensor, presence sensor at the bed or a helper. It also trains the learned night window.",
+          "night_start": "Leave empty to rely on the sensor or the learned window only.",
+          "night_end": "End of the night window, across midnight as well.",
+          "sleep_confirm": "How long the sensor has to report sleep before the setback starts.",
+          "wake_confirm": "How long it has to report awake before heating resumes. This also ends the night inside the night window.",
+          "learned_night": "Follows the night window learned from the sensor once enough days have been observed."
         }
       },
       "vacation": {
@@ -330,6 +351,9 @@
       },
       "vacation": {
         "name": "Vacation"
+      },
+      "sleep": {
+        "name": "Sleeping"
       }
     },
     "select": {

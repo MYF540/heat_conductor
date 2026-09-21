@@ -39,12 +39,14 @@ from .core.energy import EnergyParams
 from .core.engine import EngineResult, HeatingEngine
 from .core.models import ControlParams, OperatingMode
 from .core.setpoint import SetpointParams, TrvCommand
+from .core.sleep import SleepParams
 from .helpers import IssueTracker, async_fetch_forecast, async_send_heartbeat
 from .inputs import ControlState, EntityConfig, InputReader, RoomConfig, build_snapshot
 from .params import (
     control_params,
     energy_params,
     setpoint_params,
+    sleep_params,
     solar_reference,
     vacation_params,
 )
@@ -128,6 +130,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
             self.setpoint_params,
             solar_reference(self._options),
             vacation_params(self._options),
+            sleep_params(self._options),
         )
         self.settings = Settings()
         self.changelog: list[dict[str, Any]] = []
@@ -194,6 +197,16 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
         return self._options
 
     @property
+    def sleep_params(self) -> SleepParams:
+        """Night window, confirmation times and learned night."""
+        return sleep_params(self._options)
+
+    @property
+    def has_night_window(self) -> bool:
+        """Whether a manual night window is configured."""
+        return self.sleep_params.has_window
+
+    @property
     def actuator_active(self) -> bool:
         """Whether HeatConductor may switch the boiler relay."""
         return (
@@ -252,6 +265,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
             self.setpoint_params,
             solar_reference(new),
             vacation_params(new),
+            sleep_params(new),
         )
         self.hass.async_create_task(self.async_request_refresh())
         return True

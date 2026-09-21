@@ -63,6 +63,7 @@
           "energy": "Energie und Gas",
           "room_control": "Raumsteuerung",
           "usage": "Nutzungserkennung",
+          "sleep": "Nacht und Schlaf",
           "vacation": "Urlaub",
           "learning": "Lernen und Vorausschau"
         }
@@ -190,6 +191,26 @@
         "data_description": {
           "usage_hold": "So lange gilt ein Raum nach der letzten Aktivität noch als genutzt.",
           "usage_in_eco": "Ein genutzter Raum wird auch während einer Absenkphase auf Komforttemperatur geheizt."
+        }
+      },
+      "sleep": {
+        "title": "Nacht und Schlaf",
+        "description": "Nachts senkt HeatConductor alle Räume auf ihre Eco-Temperatur, auch wenn jemand zu Hause ist. Ausgelöst wird das vom Nachtfenster, vom Schlafsensor oder vom gelernten Nachtfenster. Fenster offen, Boost, manuelle Übersteuerung und der Modus Komfort haben weiter Vorrang.",
+        "data": {
+          "sleep_sensor": "Schlafsensor",
+          "night_start": "Nachtfenster von",
+          "night_end": "Nachtfenster bis",
+          "sleep_confirm": "Bestätigungszeit Einschlafen",
+          "wake_confirm": "Bestätigungszeit Aufstehen",
+          "learned_night": "Gelerntes Nachtfenster verwenden"
+        },
+        "data_description": {
+          "sleep_sensor": "Bettsensor, Präsenzmelder am Bett oder ein Helfer. Er trainiert außerdem das gelernte Nachtfenster.",
+          "night_start": "Leer lassen, wenn nur der Sensor oder das gelernte Fenster gelten soll.",
+          "night_end": "Ende des Nachtfensters, auch über Mitternacht hinweg.",
+          "sleep_confirm": "So lange muss der Sensor Schlafen melden, bevor abgesenkt wird.",
+          "wake_confirm": "So lange muss der Sensor wach melden, bevor wieder geheizt wird. Das beendet die Nacht auch innerhalb des Nachtfensters.",
+          "learned_night": "Nutzt das aus dem Sensor gelernte Nachtfenster, sobald genug Tage beobachtet sind."
         }
       },
       "vacation": {
@@ -330,6 +351,9 @@
       },
       "vacation": {
         "name": "Urlaub"
+      },
+      "sleep": {
+        "name": "Schlafen"
       }
     },
     "select": {

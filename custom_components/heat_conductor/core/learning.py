@@ -15,6 +15,7 @@ from typing import Any
 
 from .curve_advice import CurveAdvisor
 from .presence import PresenceLearner
+from .sleep import NightPattern
 
 SAMPLE_INTERVAL = timedelta(minutes=5)
 HEAT_WINDOW_SAMPLES = 7  # 30 min
@@ -472,6 +473,7 @@ class Learner:
         self.boiler = BoilerCycleLearner()
         self.curve = HeatingCurveLearner()
         self.presence = PresenceLearner()
+        self.night = NightPattern()
         self.curve_advice = CurveAdvisor()
 
     def room(self, room_id: str) -> RoomLearner:
@@ -485,6 +487,7 @@ class Learner:
             self.boiler = BoilerCycleLearner()
             self.curve = HeatingCurveLearner()
             self.presence = PresenceLearner()
+            self.night = NightPattern()
             self.curve_advice = CurveAdvisor()
         else:
             self.rooms.pop(room_id, None)
@@ -502,6 +505,7 @@ class Learner:
             "boiler": self.boiler.summary(),
             "heating_curve": self.curve.summary(),
             "presence": self.presence.summary(),
+            "night": self.night.summary(),
             "curve_advice": self.curve_advice.summary(
                 names,
                 current=self.curve.fit(),
@@ -517,6 +521,7 @@ class Learner:
             "boiler": self.boiler.to_dict(),
             "curve": self.curve.to_dict(),
             "presence": self.presence.to_dict(),
+            "night": self.night.to_dict(),
             "curve_advice": self.curve_advice.to_dict(),
         }
 
@@ -533,5 +538,6 @@ class Learner:
         learner.boiler = BoilerCycleLearner.from_dict(data.get("boiler"))
         learner.curve = HeatingCurveLearner.from_dict(data.get("curve"))
         learner.presence = PresenceLearner.from_dict(data.get("presence"))
+        learner.night = NightPattern.from_dict(data.get("night"))
         learner.curve_advice = CurveAdvisor.from_dict(data.get("curve_advice"))
         return learner

@@ -42,6 +42,9 @@ CONF_BOILER_WINTER_MODE: Final = "boiler_winter_mode"
 CONF_PUMP_SENSOR: Final = "pump_sensor"
 CONF_BOILER_FLOW_TEMPERATURE: Final = "boiler_flow_temperature"
 CONF_BOILER_RETURN_TEMPERATURE: Final = "boiler_return_temperature"
+CONF_SLEEP_SENSOR: Final = "sleep_sensor"
+CONF_NIGHT_START: Final = "night_start"
+CONF_NIGHT_END: Final = "night_end"
 
 # Room subentry
 CONF_ROOM_KIND: Final = "kind"
@@ -155,6 +158,17 @@ VACATION_DEFAULTS: Final[dict[str, float | bool]] = {
     CONF_AUTO_VACATION_RETURN: 180,  # min at home before it ends
 }
 
+# Night setback (stored in options)
+CONF_SLEEP_CONFIRM: Final = "sleep_confirm"
+CONF_WAKE_CONFIRM: Final = "wake_confirm"
+CONF_LEARNED_NIGHT: Final = "learned_night"
+
+SLEEP_DEFAULTS: Final[dict[str, float | bool]] = {
+    CONF_SLEEP_CONFIRM: 20,  # min the sleep sensor must report sleep
+    CONF_WAKE_CONFIRM: 15,  # min it must report awake again
+    CONF_LEARNED_NIGHT: True,  # follow the learned night window
+}
+
 # Learning and anticipation (stored in options)
 CONF_OPTIMUM_START: Final = "optimum_start"
 CONF_OPTIMUM_START_MAX_LEAD: Final = "optimum_start_max_lead"
@@ -180,5 +194,6 @@ ALL_DEFAULTS: Final[dict[str, float | bool]] = {
     **ROOM_CONTROL_DEFAULTS,
     **USAGE_DEFAULTS,
     **VACATION_DEFAULTS,
+    **SLEEP_DEFAULTS,
     **LEARNING_DEFAULTS,
 }

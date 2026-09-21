@@ -177,6 +177,16 @@ def build_state(hass: HomeAssistant, coordinator: HeatConductorCoordinator) -> d
                 "since": _jsonable(coordinator.engine.auto_vacation.since),
                 "nobody_home_since": _jsonable(coordinator.engine.auto_vacation.absent_since),
             },
+            "sleep": {
+                "sleeping": result.sleep.sleeping,
+                "source": result.sleep.source.value,
+                "since": _jsonable(result.sleep.since),
+                "sensor": result.sleep.sensor_sleeping,
+                "window": {
+                    "start": coordinator.sleep_params.window_start,
+                    "end": coordinator.sleep_params.window_end,
+                },
+            },
             "learned_schedule": {
                 "enabled": coordinator.settings.learned_schedule_enabled,
                 "comfort_now": result.learned_schedule_on,

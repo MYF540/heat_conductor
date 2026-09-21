@@ -140,7 +140,8 @@ Die HmIP-Integration liefert je Thermostat eine Climate-Entity (Soll-/Ist-Temper
 4. Globaler Modus: Aus / Urlaub (auch automatisch erkannt) / Abwesend / Eco / Komfort
 5. Anwesenheit (niemand zu Hause → Eco)
 6. Zeitplan: **HA-Zeitplan-Helfer** je Raum (`an` = Komfort, `aus` = Absenkung); ohne eigenen Helfer optional der **gelernte Anwesenheits-Zeitplan**
-7. **Nutzungserkennung** (optional je Raum): genutzter Raum → Komfort, ungenutzter Raum → Absenkung. Nutzung erkennen Geräte des Raums (Fernseher, PC, Präsenzmelder), mit Nachlaufzeit
+7. **Nachtabsenkung** (optional): Nachtfenster, Schlafsensor mit Bestätigungszeit oder gelerntes Nachtfenster → alle Räume auf Absenkung, auch bei Anwesenheit
+8. **Nutzungserkennung** (optional je Raum): genutzter Raum → Komfort, ungenutzter Raum → Absenkung. Nutzung erkennen Geräte des Raums (Fernseher, PC, Präsenzmelder), mit Nachlaufzeit
 
 **Solltemperaturen an die Thermostate schreiben**, mit diesen Regeln (wegen Batterie und HmIP-Duty-Cycle):
 
@@ -380,6 +381,7 @@ hacs.json  README.md  PLAN.md  LICENSE
 | 2026-09-14 | Raumsteuerung nach Installation standardmäßig aus (eigener Schalter) |
 | 2026-09-14 | Panel als abhängigkeitsfreie Web-Component ohne Build (statt Lit/TypeScript): kein Node-Build, offline lauffähig |
 | 2026-09-14 | Was-wäre-wenn für alle Nutzer lesend erlaubt, bis 168 h; Änderungsprotokoll hält die letzten 500 Einträge |
+| 2026-09-21 | Nachtabsenkung: manuelles Nachtfenster, optionaler Schlafsensor mit Bestätigungs- und Aufwachzeit, daraus gelerntes Nachtfenster; Vorrang über Zeitplan und Nutzung, unter Modus Komfort und Boost |
 | 2026-09-18 | Heizkurven-Empfehlung: Engpass-Raum je Außentemperatur-Bereich bei durchgehendem Brennerbetrieb, Ziel 85 % Ventilöffnung, Heizkörper-Exponent 1,3; nur Anzeige, keine Änderung am Regler |
 | 2026-09-18 | Rückmeldungen vom Kessel als optionale Eingänge (Relais-Rückmeldung, Brennersperrzeit, Winterbetrieb, Pumpe, Kesselfühler Vor-/Rücklauf); Rohrfühler werden gegen den Kesselfühler mit gelerntem Versatz geprüft |
 | 2026-09-17 | Automatischer Urlaub: 2 Tage ohne Anwesenheit startet ihn, 3 h Anwesenheit beendet ihn; währenddessen kein Lernen des Anwesenheitsplans |

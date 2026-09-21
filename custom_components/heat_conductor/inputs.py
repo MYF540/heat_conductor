@@ -58,6 +58,7 @@ from .const import (
     CONF_ROOM_KIND,
     CONF_ROOM_TEMPERATURE,
     CONF_SCHEDULE,
+    CONF_SLEEP_SENSOR,
     CONF_SOLAR_GAIN,
     CONF_SOLAR_POWER,
     CONF_USAGE_ENTITIES,
@@ -166,6 +167,7 @@ class EntityConfig:
     pump: str | None = None
     boiler_flow_temperature: str | None = None
     boiler_return_temperature: str | None = None
+    sleep_sensor: str | None = None
 
     @classmethod
     def from_entry(cls, entry: ConfigEntry) -> EntityConfig:
@@ -200,6 +202,7 @@ class EntityConfig:
             pump=one(CONF_PUMP_SENSOR),
             boiler_flow_temperature=one(CONF_BOILER_FLOW_TEMPERATURE),
             boiler_return_temperature=one(CONF_BOILER_RETURN_TEMPERATURE),
+            sleep_sensor=one(CONF_SLEEP_SENSOR),
         )
 
     @property
@@ -228,6 +231,7 @@ class EntityConfig:
             self.pump,
             self.boiler_flow_temperature,
             self.boiler_return_temperature,
+            self.sleep_sensor,
         ):
             if entity_id:
                 ids.add(entity_id)
@@ -462,6 +466,7 @@ def build_snapshot(
         boiler_return_temperature=reader.temperature(config.boiler_return_temperature)
         if config.boiler_return_temperature
         else None,
+        sleep_sensor=reader.binary(config.sleep_sensor) if config.sleep_sensor else None,
     )
 
 

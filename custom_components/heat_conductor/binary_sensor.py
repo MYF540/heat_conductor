@@ -34,6 +34,8 @@ async def async_setup_entry(
         entities.append(WatchdogSensor(coordinator))
     if coordinator.entities.presence:
         entities.append(VacationSensor(coordinator))
+    if coordinator.entities.sleep_sensor is not None or coordinator.has_night_window:
+        entities.append(SleepSensor(coordinator))
     async_add_entities(entities)
     for room in coordinator.rooms:
         if room.kind is RoomKind.REGULATED and room.usage_entities:
@@ -68,6 +70,28 @@ class VacationSensor(HeatConductorEntity, BinarySensorEntity):
             "since": auto.since.isoformat() if auto.since else None,
             "nobody_home_since": auto.absent_since.isoformat() if auto.absent_since else None,
             "automatic_enabled": self.coordinator.engine.vacation_params.enabled,
+        }
+
+
+class SleepSensor(HeatConductorEntity, BinarySensorEntity):
+    """On while the home sleeps: night window, sleep sensor or learned night."""
+
+    def __init__(self, coordinator: HeatConductorCoordinator) -> None:
+        super().__init__(coordinator, "sleep")
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether the night setback is active."""
+        return self.coordinator.data.sleep.sleeping
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Where the night comes from and since when."""
+        sleep = self.coordinator.data.sleep
+        return {
+            "source": sleep.source.value,
+            "since": sleep.since.isoformat() if sleep.since else None,
+            "sleep_sensor": sleep.sensor_sleeping,
         }
 
 
