@@ -375,9 +375,12 @@ def plan_trv(
         state.offset_at = now
     offset = state.offset if compensation and state.offset is not None else 0.0
 
+    # A hand change is recognised even when our own target changes at the same time:
+    # whoever turns the knob stands in the room and usually trips its activity sensor.
+    # The grace only covers the lag of our own writes, so an adoption does not restart
+    # it and further steps of the same turn are taken over as well.
     if (
         params.adopt_trv_changes
-        and not target_changed
         and source is not SetpointSource.WINDOW
         and state.last_written is not None
         and state.last_write_at is not None
@@ -386,7 +389,6 @@ def plan_trv(
         and trv.current_target > params.window_temp + 0.25
     ):
         state.last_written = trv.current_target
-        state.last_write_at = now
         return None, clamp_temperature(round_half(trv.current_target - offset))
 
     desired = clamp_temperature(round_half(target + offset))

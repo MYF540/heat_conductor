@@ -224,6 +224,63 @@ def test_manual_change_at_thermostat_becomes_override() -> None:
     assert manual == 23.0
 
 
+def test_manual_change_is_adopted_while_the_target_changes() -> None:
+    # Standing at the thermostat trips the room's activity sensor in the same run.
+    state = TrvState(last_written=21.0, last_write_at=T0)
+    command, manual = plan_trv(
+        state,
+        trv(target=23.0),
+        target=21.0,
+        target_changed=True,
+        source=SetpointSource.USAGE_ACTIVE,
+        room_temperature=None,
+        compensation=False,
+        now=T0 + timedelta(minutes=10),
+        params=PARAMS,
+        duty_cycle_ok=True,
+    )
+    assert command is None
+    assert manual == 23.0
+
+
+def test_every_step_of_a_turn_at_the_thermostat_is_adopted() -> None:
+    state = TrvState(last_written=21.0, last_write_at=T0)
+    later = T0 + timedelta(minutes=10)
+    for step in (21.5, 22.0, 22.5, 23.0):
+        later += timedelta(seconds=5)
+        command, manual = plan_trv(
+            state,
+            trv(target=step),
+            target=21.0,
+            target_changed=False,
+            source=SetpointSource.SCHEDULE_COMFORT,
+            room_temperature=None,
+            compensation=False,
+            now=later,
+            params=PARAMS,
+            duty_cycle_ok=True,
+        )
+        assert command is None
+        assert manual == step
+
+
+def test_own_write_lag_is_not_manual() -> None:
+    state = TrvState(last_written=21.0, last_write_at=T0)
+    _, manual = plan_trv(
+        state,
+        trv(target=18.0),
+        target=21.0,
+        target_changed=True,
+        source=SetpointSource.SCHEDULE_COMFORT,
+        room_temperature=None,
+        compensation=False,
+        now=T0 + timedelta(minutes=1),
+        params=PARAMS,
+        duty_cycle_ok=True,
+    )
+    assert manual is None
+
+
 def test_window_function_of_thermostat_is_not_manual() -> None:
     state = TrvState(last_written=21.0, last_write_at=T0)
     _, manual = plan_trv(
