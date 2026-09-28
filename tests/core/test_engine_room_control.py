@@ -22,6 +22,7 @@ def snapshot(
     trv_target: float = 18.0,
     schedule_on: bool = True,
     duty: float | None = None,
+    activity: bool | None = None,
 ) -> EngineSnapshot:
     return EngineSnapshot(
         now=now,
@@ -51,6 +52,7 @@ def snapshot(
                 room_id="bad",
                 schedule_on=schedule_on,
                 trvs=(TrvInput("climate.bad", True, trv_target, 21.0, "heat"),),
+                activity=activity,
             ),
         ),
         duty_cycle=Reading(duty, now) if duty is not None else None,
@@ -93,6 +95,22 @@ def test_manual_thermostat_change_becomes_override() -> None:
     )
     assert following.setpoint("bad").source is SetpointSource.OVERRIDE
     assert following.setpoint("bad").target == 23.0  # 24 minus offset 1
+
+
+def test_manual_change_while_activity_starts_is_kept() -> None:
+    engine = HeatingEngine(ControlParams())
+    engine.evaluate(snapshot(T0, enabled=True, activity=False))  # idle: eco 18 + 1 = 19
+    later = T0 + timedelta(minutes=10)
+    # Turning the knob to 24 and the motion sensor arrive in the same refresh.
+    result = engine.evaluate(snapshot(later, enabled=True, trv_target=24.0, activity=True))
+    assert result.manual_overrides == ("bad",)
+    assert result.trv_commands == ()
+    following = engine.evaluate(
+        snapshot(later + timedelta(minutes=1), enabled=True, trv_target=24.0, activity=True)
+    )
+    assert following.setpoint("bad").source is SetpointSource.OVERRIDE
+    assert following.setpoint("bad").target == 23.0
+    assert following.trv_commands == ()
 
 
 def test_room_runtime_is_persisted() -> None:
