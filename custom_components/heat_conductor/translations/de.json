@@ -241,7 +241,10 @@
           "use_forecast": "Wettervorhersage nutzen",
           "solar_reference": "PV-Spitzenleistung für Sonnen-Proxy",
           "curve_setting": "Eingestellte Heizkurve am Kesselregler",
-          "curve_target_valve": "Ziel-Ventilöffnung des Engpass-Raums"
+          "curve_target_valve": "Ziel-Ventilöffnung des Engpass-Raums",
+          "arrival_grace": "Auf erwartete Ankunft warten",
+          "default_preheat": "Vorheizzeit ohne Lernwerte",
+          "wake_preheat": "Vor dem Aufstehen aufwärmen"
         },
         "data_description": {
           "optimum_start": "Beginnt früh genug zu heizen, damit zum Zeitplanbeginn die Komforttemperatur erreicht ist (nutzt gelernte Aufheizraten).",
@@ -249,7 +252,10 @@
           "use_forecast": "Kältere Vorhersagen können die Heizgrenze aufheben und früher heizen lassen.",
           "solar_reference": "0 = aus. Räume mit Sonnengewinnen ignorieren ihr Temperaturdefizit oberhalb von 40 % dieser Leistung.",
           "curve_setting": "Die Kurvennummer am Einbauregler, z. B. 1,4. Damit zeigt die Empfehlung eine Kurvennummer. 0 = unbekannt.",
-          "curve_target_valve": "Die Empfehlung legt die Kurve so, dass der am weitesten geöffnete Raum etwa so weit offen ist."
+          "curve_target_valve": "Die Empfehlung legt die Kurve so, dass der am weitesten geöffnete Raum etwa so weit offen ist.",
+          "arrival_grace": "So lange bleibt es nach dem erwarteten Heimkommen warm, auch wenn noch niemand da ist. Kommt niemand, geht die Heizung danach auf Eco.",
+          "default_preheat": "Vorlauf vor der erwarteten Ankunft, solange die Aufheizrate eines Raums noch nicht gelernt ist.",
+          "wake_preheat": "Endet das Nachtfenster (fest oder gelernt), werden die Räume so früh wieder aufgeheizt, dass sie zum Aufstehen warm sind."
         }
       }
     },
@@ -517,7 +523,7 @@
         "name": "Raumsteuerung"
       },
       "learned_schedule": {
-        "name": "Gelernter Zeitplan"
+        "name": "Vorausschauend heizen"
       },
       "usage_detection": {
         "name": "Nutzungserkennung"

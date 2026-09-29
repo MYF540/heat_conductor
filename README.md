@@ -50,8 +50,9 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
 - Brennerzyklen, Heizkurve des Kesselreglers
 - **Heizkurven-Empfehlung:** aus Ventilöffnungen, Raumtemperaturen und Vorlauf entsteht je
   Außentemperatur-Bereich ein Vorschlag für eine passendere Heizkurve des Kesselreglers
-- **Gelernter Zeitplan:** aus der Anwesenheit entsteht ein Wochenplan als Vorschlag für die
-  ganze Anlage; auf Wunsch folgen ihm Räume ohne eigenen Zeitplan-Helfer
+- **Vorausschauend heizen:** aus der Anwesenheit gelernte Ankunftszeiten; vorgeheizt wird
+  rechtzeitig vor der erwarteten Ankunft, wer früher kommt, bekommt sofort Wärme, kommt niemand,
+  geht die Heizung nach einer Wartezeit auf Eco
 - **Gelerntes Nachtfenster:** der Schlafsensor trainiert, wann üblicherweise geschlafen wird
 - **Automatischer Urlaub:** ist zwei Tage niemand zu Hause, schaltet HeatConductor in den
   Urlaubsmodus und beendet ihn drei Stunden nach der Rückkehr; währenddessen wird nicht gelernt
@@ -121,14 +122,30 @@ eingestellte **Nachlaufzeit** (Standard 30 min) auf Komfort.
 - *Nutzung hebt Absenkung auf* (Standard an): ein genutzter Raum wird auch in einer Absenkphase
   auf Komfort geheizt. Ausschalten, wenn nachts keinesfalls geheizt werden soll.
 
-### Gelernter Zeitplan aus der Anwesenheit
+### Vorausschauend heizen
 
-HeatConductor lernt aus den Anwesenheits-Entitäten, wann jemand zu Hause ist, und schlägt daraus
-einen Wochenplan vor (Panel-Reiter *Zeitplan*, sichtbar nach etwa zwei Wochen). Der Vorschlag
-gilt für die ganze Anlage.
+HeatConductor lernt aus den Anwesenheits-Entitäten, wann üblicherweise jemand zu Hause ist
+(Panel-Reiter *Zeitplan*, belastbar nach etwa zwei Wochen). Mit dem Schalter
+*Vorausschauend heizen* wird daraus eine Vorhersage, die die echte Anwesenheit bestätigt:
 
-Mit dem Schalter *Gelernter Zeitplan* folgen ihm alle Räume **ohne eigenen Zeitplan-Helfer**;
-ein konfigurierter Zeitplan-Helfer hat immer Vorrang.
+| Lage | Verhalten | Grund im Panel |
+|---|---|---|
+| jemand zu Hause | Komfort | *Jemand zu Hause* |
+| niemand da, Ankunft laut Plan bald | rechtzeitig vorheizen | *Ankunft erwartet* |
+| früher heimgekommen | sofort Komfort | *Jemand zu Hause* |
+| erwartete Ankunft verstrichen, niemand da | noch die **Wartezeit** (Standard 45 min) warm, dann Eco | *Ankunft erwartet*, danach *Niemand zu Hause* |
+| niemand da, keine Ankunft erwartet | Eco | *Niemand zu Hause* |
+| Nachtfenster endet (fest oder gelernt) | vor dem Aufstehen aufheizen | *Aufwärmen vor dem Aufstehen* |
+
+Wie früh vorgeheizt wird, folgt je Raum aus der gelernten Aufheizrate (optimaler Start);
+solange sie fehlt, gilt die *Vorheizzeit ohne Lernwerte* (Standard 60 min).
+
+- Gilt für Räume **ohne eigenen Zeitplan-Helfer**; ein Zeitplan-Helfer bleibt die feste Vorgabe
+  seines Raums.
+- Nachtabsenkung und Nutzungserkennung liegen darüber: nachts wird abgesenkt, und ein Raum mit
+  Nutzungserkennung wird erst warm, wenn er genutzt wird.
+- Ohne genug Lerndaten entscheidet allein die Anwesenheit (jemand da → Komfort).
+- Später geplant: Ankunft über die Entfernung zum Zuhause (Integration *Proximity*) erkennen.
 
 ### Nachtabsenkung
 
@@ -322,7 +339,7 @@ Kessel-ESP mit Vor-/Rücklauf: siehe [esphome/README.md](esphome/README.md). Vai
 | je Raum: Thermostat, Solltemperatur, Komfort-/Eco-Temperatur | Raumsteuerung |
 | je Raum: Bedarf, Temperatur, Status | Attribute: Soll, Defizit, Ventil, Gewichtung |
 | je Raum: Nutzungserkennung, Raum genutzt | nur bei konfigurierten Geräten zur Nutzungserkennung |
-| Gelernter Zeitplan | an = Räume ohne Zeitplan-Helfer folgen dem gelernten Anwesenheitsplan |
+| Vorausschauend heizen | an = Räume ohne Zeitplan-Helfer heizen nach erwarteter und tatsächlicher Anwesenheit |
 | Urlaub | Urlaub aktiv (Attribute: geplant oder automatisch, seit wann, niemand zu Hause seit) |
 | Schlafen | Nachtabsenkung aktiv (Attribute: Auslöser, seit wann, Zustand des Schlafsensors) |
 | je Raum: gelernte Aufheizrate, gelernte Auskühl-Zeitkonstante | Diagnose |

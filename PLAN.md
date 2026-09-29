@@ -139,7 +139,7 @@ Die HmIP-Integration liefert je Thermostat eine Climate-Entity (Soll-/Ist-Temper
 3. Boost (zeitlich begrenzt)
 4. Globaler Modus: Aus / Urlaub (auch automatisch erkannt) / Abwesend / Eco / Komfort
 5. Anwesenheit (niemand zu Hause → Eco)
-6. Zeitplan: **HA-Zeitplan-Helfer** je Raum (`an` = Komfort, `aus` = Absenkung); ohne eigenen Helfer optional der **gelernte Anwesenheits-Zeitplan**
+6. Zeitplan: **HA-Zeitplan-Helfer** je Raum (`an` = Komfort, `aus` = Absenkung); ohne eigenen Helfer optional **vorausschauend heizen**: gelernte Ankunft → vorheizen, Anwesenheit → Komfort, erwartete Ankunft verstrichen → nach Wartezeit Eco
 7. **Nachtabsenkung** (optional): Nachtfenster, Schlafsensor mit Bestätigungszeit oder gelerntes Nachtfenster → alle Räume auf Absenkung, auch bei Anwesenheit
 8. **Nutzungserkennung** (optional je Raum): genutzter Raum → Komfort, ungenutzter Raum → Absenkung. Nutzung erkennen Geräte des Raums (Fernseher, PC, Präsenzmelder), mit Nachlaufzeit
 
@@ -381,6 +381,7 @@ hacs.json  README.md  PLAN.md  LICENSE
 | 2026-09-14 | Raumsteuerung nach Installation standardmäßig aus (eigener Schalter) |
 | 2026-09-14 | Panel als abhängigkeitsfreie Web-Component ohne Build (statt Lit/TypeScript): kein Node-Build, offline lauffähig |
 | 2026-09-14 | Was-wäre-wenn für alle Nutzer lesend erlaubt, bis 168 h; Änderungsprotokoll hält die letzten 500 Einträge |
+| 2026-09-29 | Anwesenheitskonzept A „Vorausschauend heizen“ statt gelerntem Zeitplan: Vorhersage aus dem Anwesenheitsraster, Bestätigung durch echte Anwesenheit, Wartezeit, Aufwärmen vor Ende des Nachtfensters; Ankunft über Entfernung (Proximity) als spätere Ergänzung |
 | 2026-09-29 | Steuerung auf „Freigabe statt Brennerstart“ ausgerichtet: das Relais gibt den Kessel nur frei; laufende Brenner werden nicht abgeschaltet, nach einem Brennerlauf endet die Freigabe bei Bedarf unter der Start-Schwelle; Diagnose „Kessel heizt trotz Freigabe nicht“; Übersichtsgraphen mit 5-Minuten-Mittel und Tooltip |
 | 2026-09-21 | Nachtabsenkung: manuelles Nachtfenster, optionaler Schlafsensor mit Bestätigungs- und Aufwachzeit, daraus gelerntes Nachtfenster; Vorrang über Zeitplan und Nutzung, unter Modus Komfort und Boost |
 | 2026-09-18 | Heizkurven-Empfehlung: Engpass-Raum je Außentemperatur-Bereich bei durchgehendem Brennerbetrieb, Ziel 85 % Ventilöffnung, Heizkörper-Exponent 1,3; nur Anzeige, keine Änderung am Regler |

@@ -39,6 +39,9 @@ class SetpointSource(StrEnum):
     USAGE_ACTIVE = "usage_active"
     USAGE_IDLE = "usage_idle"
     SLEEP = "sleep"
+    PRESENT = "present"
+    ARRIVAL_EXPECTED = "arrival_expected"
+    WAKE_PREHEAT = "wake_preheat"
 
 
 # Sources the usage detection may change: the automatic comfort and eco decisions.
@@ -48,6 +51,9 @@ AUTO_COMFORT_SOURCES = frozenset(
         SetpointSource.NO_SCHEDULE,
         SetpointSource.SCHEDULE_COMFORT,
         SetpointSource.OPTIMUM_START,
+        SetpointSource.PRESENT,
+        SetpointSource.ARRIVAL_EXPECTED,
+        SetpointSource.WAKE_PREHEAT,
     }
 )
 AUTO_ECO_SOURCES = frozenset({SetpointSource.ECO, SetpointSource.SCHEDULE_ECO})
@@ -75,6 +81,10 @@ class SetpointParams:
     optimum_start_max_lead: timedelta = timedelta(hours=3)
     usage_hold: timedelta = timedelta(minutes=30)
     usage_in_eco: bool = True
+    # Predictive presence: preheat before an expected arrival, wait a while for it.
+    arrival_grace: timedelta = timedelta(minutes=45)
+    default_preheat: timedelta = timedelta(minutes=60)
+    wake_preheat: bool = True
 
 
 @dataclass(slots=True)
@@ -169,6 +179,10 @@ class SetpointContext:
     forecast_drop: bool = False
     activity: bool | None = None  # None: the room has no activity sensors
     sleeping: bool = False  # night setback for the whole home
+    wake_at: datetime | None = None  # expected end of the night
+    predictive: bool = False  # the room follows the predicted presence
+    arrival_now: datetime | None = None  # start of the presence window we are in
+    arrival_next: datetime | None = None  # start of the next expected presence
 
 
 @dataclass(frozen=True, slots=True)
@@ -233,6 +247,23 @@ def optimum_start_lead(
     return min(lead, params.optimum_start_max_lead)
 
 
+def preheat_lead(runtime: RoomRuntime, ctx: SetpointContext, params: SetpointParams) -> timedelta:
+    """How long before a comfort period this room has to start heating."""
+    lead = optimum_start_lead(runtime, ctx, params)
+    return lead if lead is not None else params.default_preheat
+
+
+def arrival_expected(runtime: RoomRuntime, ctx: SetpointContext, params: SetpointParams) -> bool:
+    """Somebody is expected: preheat before the arrival, then wait a while for it."""
+    now = ctx.now
+    if ctx.arrival_now is not None and now < ctx.arrival_now + params.arrival_grace:
+        return True
+    return (
+        ctx.arrival_next is not None
+        and ctx.arrival_next - preheat_lead(runtime, ctx, params) <= now < ctx.arrival_next
+    )
+
+
 def room_active(runtime: RoomRuntime, ctx: SetpointContext, params: SetpointParams) -> bool | None:
     """Whether the room is in use. None without activity sensors or detection off."""
     if ctx.activity is None or not runtime.usage_enabled:
@@ -292,7 +323,21 @@ def compute_setpoint(
         target, source = runtime.comfort, SetpointSource.COMFORT
     elif ctx.sleeping:
         # The night beats schedule and usage, but not the modes above.
-        target, source = runtime.eco, SetpointSource.SLEEP
+        if (
+            params.wake_preheat
+            and ctx.wake_at is not None
+            and now >= ctx.wake_at - preheat_lead(runtime, ctx, params)
+        ):
+            target, source = runtime.comfort, SetpointSource.WAKE_PREHEAT
+        else:
+            target, source = runtime.eco, SetpointSource.SLEEP
+    elif ctx.predictive and ctx.present is not None and ctx.schedule_on is None:
+        if ctx.present:
+            target, source = runtime.comfort, SetpointSource.PRESENT
+        elif arrival_expected(runtime, ctx, params):
+            target, source = runtime.comfort, SetpointSource.ARRIVAL_EXPECTED
+        else:
+            target, source = runtime.eco, SetpointSource.ABSENT
     elif ctx.present is False:
         target, source = runtime.eco, SetpointSource.ABSENT
     elif ctx.schedule_on is None:

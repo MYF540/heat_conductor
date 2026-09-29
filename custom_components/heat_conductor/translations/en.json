@@ -241,7 +241,10 @@
           "use_forecast": "Use weather forecast",
           "solar_reference": "PV peak power for sun proxy",
           "curve_setting": "Heating curve set at the boiler controller",
-          "curve_target_valve": "Target valve opening of the bottleneck room"
+          "curve_target_valve": "Target valve opening of the bottleneck room",
+          "arrival_grace": "Wait for an expected arrival",
+          "default_preheat": "Preheat time without learned values",
+          "wake_preheat": "Warm up before getting up"
         },
         "data_description": {
           "optimum_start": "Starts heating early enough to reach comfort temperature when the schedule begins (uses learned heat-up rates).",
@@ -249,7 +252,10 @@
           "use_forecast": "Colder forecasts can release the heating limit and start heating earlier.",
           "solar_reference": "0 = off. Rooms with solar gains ignore their temperature deficit above 40 % of this power.",
           "curve_setting": "The curve number at the built-in controller, e.g. 1.4. Lets the suggestion show a curve number. 0 = unknown.",
-          "curve_target_valve": "The suggestion places the curve so that the most open room is about this far open."
+          "curve_target_valve": "The suggestion places the curve so that the most open room is about this far open.",
+          "arrival_grace": "How long it stays warm after the expected arrival although nobody is there yet. If nobody comes, heating goes back to eco.",
+          "default_preheat": "Lead time before the expected arrival while a room's heat-up rate is not learned yet.",
+          "wake_preheat": "When the night window (fixed or learned) ends, the rooms are heated early enough to be warm when people get up."
         }
       }
     },
@@ -517,7 +523,7 @@
         "name": "Room control"
       },
       "learned_schedule": {
-        "name": "Learned schedule"
+        "name": "Predictive heating"
       },
       "usage_detection": {
         "name": "Usage detection"

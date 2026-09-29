@@ -182,6 +182,9 @@ CONF_RESIDUAL_HEAT: Final = "residual_heat"
 CONF_USE_FORECAST: Final = "use_forecast"
 CONF_SOLAR_REFERENCE: Final = "solar_reference"
 CONF_CURVE_SETTING: Final = "curve_setting"
+CONF_ARRIVAL_GRACE: Final = "arrival_grace"
+CONF_DEFAULT_PREHEAT: Final = "default_preheat"
+CONF_WAKE_PREHEAT: Final = "wake_preheat"
 CONF_CURVE_TARGET_VALVE: Final = "curve_target_valve"
 
 LEARNING_DEFAULTS: Final[dict[str, float | bool]] = {
@@ -192,6 +195,9 @@ LEARNING_DEFAULTS: Final[dict[str, float | bool]] = {
     CONF_SOLAR_REFERENCE: 0.0,  # kW peak, 0 = no solar proxy
     CONF_CURVE_SETTING: 0.0,  # heating curve set at the boiler controller, 0 = unknown
     CONF_CURVE_TARGET_VALVE: 85,  # % valve opening of the bottleneck room
+    CONF_ARRIVAL_GRACE: 45,  # min an expected arrival is waited for
+    CONF_DEFAULT_PREHEAT: 60,  # min preheat while the heat-up rate is unknown
+    CONF_WAKE_PREHEAT: True,  # warm up before the night window ends
 }
 
 ALL_DEFAULTS: Final[dict[str, float | bool]] = {

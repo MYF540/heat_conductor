@@ -108,6 +108,55 @@ class WeeklyPattern:
                     return False, moment
         return False, None
 
+    def window_starts(self, now: datetime) -> tuple[datetime | None, datetime | None]:
+        """(start of the window we are in, start of the next window).
+
+        A window running into midnight continues the one of the day before, so its
+        start is the start of the evening window, not 00:00.
+        """
+        if not self.ready:
+            return None, None
+        windows = self.windows()
+        midnight = datetime.combine(now.date(), time(), tzinfo=now.tzinfo)
+        minute = now.hour * 60 + now.minute
+        current: datetime | None = None
+        for start, end in windows[now.weekday()]:
+            if start <= minute < end:
+                current = midnight + timedelta(minutes=start)
+                if start == 0:
+                    previous = windows[(now.weekday() - 1) % DAYS]
+                    if previous and previous[-1][1] == 24 * 60:
+                        current = midnight - timedelta(days=1, minutes=-previous[-1][0])
+                break
+        upcoming: datetime | None = None
+        for offset in range(DAYS + 1):
+            day = (now.weekday() + offset) % DAYS
+            for start, _end in windows[day]:
+                moment = midnight + timedelta(days=offset, minutes=start)
+                if moment > now and not (start == 0 and offset > 0 and _continues(windows, day)):
+                    upcoming = moment
+                    break
+            if upcoming is not None:
+                break
+        return current, upcoming
+
+    def window_end(self, now: datetime) -> datetime | None:
+        """End of the window we are in, following it across midnight."""
+        if not self.ready:
+            return None
+        windows = self.windows()
+        midnight = datetime.combine(now.date(), time(), tzinfo=now.tzinfo)
+        minute = now.hour * 60 + now.minute
+        for start, end in windows[now.weekday()]:
+            if start <= minute < end:
+                moment = midnight + timedelta(minutes=end)
+                if end == 24 * 60:
+                    following = windows[(now.weekday() + 1) % DAYS]
+                    if following and following[0][0] == 0:
+                        moment = midnight + timedelta(days=1, minutes=following[0][1])
+                return moment
+        return None
+
     def summary(self) -> dict[str, Any]:
         """Everything the panel needs."""
         return {
@@ -163,6 +212,12 @@ class WeeklyPattern:
 
 class PresenceLearner(WeeklyPattern):
     """Probability of somebody being at home per weekday and half hour."""
+
+
+def _continues(windows: list[list[tuple[int, int]]], day: int) -> bool:
+    """Whether the first window of a day continues one from the day before."""
+    previous = windows[(day - 1) % DAYS]
+    return bool(previous) and previous[-1][1] == 24 * 60
 
 
 def _is_grid(value: Any) -> bool:

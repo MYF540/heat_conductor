@@ -99,3 +99,29 @@ def test_restores_nothing_from_broken_data() -> None:
     restored = PresenceLearner.from_dict({"grid": "nonsense", "counts": None})
     assert not restored.ready
     assert restored.days_observed == 0
+
+
+def test_window_starts_across_midnight() -> None:
+    """The evening window continues after midnight, so its start stays in the evening."""
+    learner = PresenceLearner()
+    _feed(learner, days=MIN_DAYS + 1)
+    start = T0.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=MIN_DAYS)
+
+    current, upcoming = learner.window_starts(start + timedelta(hours=2))
+    assert current == start - timedelta(days=1) + timedelta(hours=AWAY_UNTIL)
+    assert upcoming == start + timedelta(hours=AWAY_UNTIL)
+
+    current, upcoming = learner.window_starts(start + timedelta(hours=12))
+    assert current is None
+    assert upcoming == start + timedelta(hours=AWAY_UNTIL)
+
+
+def test_window_end_follows_midnight() -> None:
+    """In the evening the window ends the next morning."""
+    learner = PresenceLearner()
+    _feed(learner, days=MIN_DAYS + 1)
+    start = T0.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=MIN_DAYS)
+    assert learner.window_end(start + timedelta(hours=20)) == start + timedelta(
+        days=1, hours=AWAY_FROM
+    )
+    assert learner.window_end(start + timedelta(hours=12)) is None

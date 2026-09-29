@@ -190,7 +190,8 @@ def build_state(hass: HomeAssistant, coordinator: HeatConductorCoordinator) -> d
             },
             "learned_schedule": {
                 "enabled": coordinator.settings.learned_schedule_enabled,
-                "comfort_now": result.learned_schedule_on,
+                "occupancy": result.occupancy,
+                "next_arrival": _jsonable(result.next_arrival),
             },
             "duty_cycle_ok": result.duty_cycle_ok,
             "solar_ratio": result.solar_ratio,

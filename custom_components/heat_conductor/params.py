@@ -13,6 +13,7 @@ from typing import Any
 from .const import (
     ALL_DEFAULTS,
     CONF_ADOPT_TRV_CHANGES,
+    CONF_ARRIVAL_GRACE,
     CONF_AUTO_VACATION,
     CONF_AUTO_VACATION_AFTER,
     CONF_AUTO_VACATION_RETURN,
@@ -27,6 +28,7 @@ from .const import (
     CONF_CURVE_TARGET_VALVE,
     CONF_DEFAULT_COMFORT,
     CONF_DEFAULT_ECO,
+    CONF_DEFAULT_PREHEAT,
     CONF_DEFICIT_FULL_SCALE,
     CONF_DUTY_CYCLE_LIMIT,
     CONF_END_AFTER_BURNER_CYCLE,
@@ -61,6 +63,7 @@ from .const import (
     CONF_USE_FORECAST,
     CONF_VACATION_TEMP,
     CONF_WAKE_CONFIRM,
+    CONF_WAKE_PREHEAT,
     CONF_WINDOW_TEMP,
     CONF_WRITE_INTERVAL,
     CONF_Z_FACTOR,
@@ -157,6 +160,9 @@ PARAMS: tuple[ParamMeta, ...] = (
     _b(CONF_AUTO_VACATION, "vacation"),
     _n(CONF_AUTO_VACATION_AFTER, "vacation", "h", 6, 336, 1),
     _n(CONF_AUTO_VACATION_RETURN, "vacation", "min", 15, 1440, 15),
+    _n(CONF_ARRIVAL_GRACE, "learning", "min", 0, 240, 5),
+    _n(CONF_DEFAULT_PREHEAT, "learning", "min", 0, 240, 5),
+    _b(CONF_WAKE_PREHEAT, "learning"),
     _b(CONF_OPTIMUM_START, "learning"),
     _n(CONF_OPTIMUM_START_MAX_LEAD, "learning", "min", 15, 480, 15),
     _b(CONF_RESIDUAL_HEAT, "learning"),
@@ -259,6 +265,9 @@ def setpoint_params(options: dict[str, Any]) -> SetpointParams:
         optimum_start_max_lead=timedelta(minutes=f(CONF_OPTIMUM_START_MAX_LEAD)),
         usage_hold=timedelta(minutes=f(CONF_USAGE_HOLD)),
         usage_in_eco=bool(_value(options, CONF_USAGE_IN_ECO)),
+        arrival_grace=timedelta(minutes=f(CONF_ARRIVAL_GRACE)),
+        default_preheat=timedelta(minutes=f(CONF_DEFAULT_PREHEAT)),
+        wake_preheat=bool(_value(options, CONF_WAKE_PREHEAT)),
     )
 
 

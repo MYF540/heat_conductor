@@ -105,7 +105,8 @@ class EngineResult:
     setpoints: tuple[RoomSetpoint, ...] = ()
     trv_commands: tuple[TrvCommand, ...] = ()
     room_control_active: bool = False
-    learned_schedule_on: bool | None = None
+    occupancy: str | None = None  # present, expected, away (predictive presence)
+    next_arrival: datetime | None = None
     vacation_active: bool = False
     auto_vacation_active: bool = False
     sleep: SleepState = field(default_factory=SleepState)
@@ -245,11 +246,22 @@ class HeatingEngine:
             self.learner.presence.update(now, snap.present)
             # Only the sensor teaches the night pattern; windows must not reinforce themselves.
             self.learner.night.update(now, self.sleep.sensor_sleeping)
-        learned_on, learned_next = (
-            self.learner.presence.schedule_state(now)
-            if snap.learned_schedule_enabled
-            else (None, None)
+        # Predictive presence: the learned pattern predicts, actual presence confirms.
+        predictive = snap.learned_schedule_enabled and snap.present is not None
+        arrival_now, arrival_next = (
+            self.learner.presence.window_starts(now) if predictive else (None, None)
         )
+        occupancy = None
+        if predictive:
+            sp_ = self.setpoint_params
+            if snap.present:
+                occupancy = "present"
+            elif (arrival_now is not None and now < arrival_now + sp_.arrival_grace) or (
+                arrival_next is not None and arrival_next - sp_.default_preheat <= now
+            ):
+                occupancy = "expected"
+            else:
+                occupancy = "away"
 
         controls = {c.room_id: c for c in snap.room_controls}
         room_control_active = snap.room_control_enabled and snap.automation_enabled
@@ -262,12 +274,7 @@ class HeatingEngine:
             if room.kind is RoomKind.REGULATED and control is not None:
                 runtime = self.runtime(room.room_id)
                 learner = self.learner.room(room.room_id)
-                # Without its own schedule helper a room may follow the learned one.
-                schedule_on, next_schedule_on = (
-                    (control.schedule_on, control.next_schedule_on)
-                    if control.schedule_on is not None
-                    else (learned_on, learned_next)
-                )
+                schedule_on, next_schedule_on = control.schedule_on, control.next_schedule_on
                 setpoint = compute_setpoint(
                     room.room_id,
                     runtime,
@@ -285,6 +292,10 @@ class HeatingEngine:
                         forecast_drop=forecast_drop,
                         activity=control.activity,
                         sleeping=sleep.sleeping,
+                        wake_at=sleep.ends_at,
+                        predictive=predictive,
+                        arrival_now=arrival_now,
+                        arrival_next=arrival_next,
                     ),
                     sp,
                 )
@@ -467,7 +478,8 @@ class HeatingEngine:
             setpoints=tuple(setpoints),
             trv_commands=tuple(commands),
             room_control_active=room_control_active,
-            learned_schedule_on=learned_on,
+            occupancy=occupancy,
+            next_arrival=arrival_next,
             vacation_active=vacation,
             auto_vacation_active=auto_vacation,
             sleep=sleep,

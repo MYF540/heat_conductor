@@ -13,7 +13,7 @@ window: whoever gets up at 05:30 gets warmth.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from enum import StrEnum
 from typing import Any
 
@@ -66,6 +66,16 @@ class SleepParams:
             return start <= minute < end
         return minute >= start or minute < end  # across midnight
 
+    def window_end_at(self, now: datetime) -> datetime | None:
+        """When the manual night window that contains `now` ends."""
+        if not self.in_window(now):
+            return None
+        assert self.window_end is not None
+        end = datetime.combine(now.date(), time(), tzinfo=now.tzinfo) + timedelta(
+            minutes=self.window_end
+        )
+        return end if end > now else end + timedelta(days=1)
+
 
 @dataclass(frozen=True, slots=True)
 class SleepState:
@@ -75,6 +85,7 @@ class SleepState:
     source: SleepSource = SleepSource.NONE
     since: datetime | None = None
     sensor_sleeping: bool | None = None  # confirmed state of the sleep sensor
+    ends_at: datetime | None = None  # expected end of the night, if a window tells
 
 
 class SleepTracker:
@@ -110,11 +121,18 @@ class SleepTracker:
             self.since = None
         elif self.since is None:
             self.since = now
+        # The end of the night is known from a window, even when the sensor decides.
+        ends_at = None
+        if sleeping:
+            ends_at = params.window_end_at(now)
+            if ends_at is None and params.use_learned:
+                ends_at = pattern.window_end(now)
         return SleepState(
             sleeping=sleeping,
             source=source,
             since=self.since,
             sensor_sleeping=self.sensor_sleeping,
+            ends_at=ends_at,
         )
 
     def _update_sensor(self, now: datetime, sensor: bool | None, params: SleepParams) -> None:
