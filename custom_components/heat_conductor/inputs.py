@@ -250,6 +250,7 @@ class ControlState:
     room_control_enabled: bool
     learned_schedule_enabled: bool
     vacation_active: bool
+    network_enabled: bool = False
     forecast_6h: float | None = None
     forecast_12h: float | None = None
 
@@ -357,16 +358,18 @@ class InputReader:
             return None
         return any(s.state in (STATE_HOME, STATE_ON) for s in known)
 
-    def schedule(self, entity_id: str | None) -> tuple[bool | None, datetime | None]:
-        """(currently on, next start of an 'on' period)."""
+    def schedule(
+        self, entity_id: str | None
+    ) -> tuple[bool | None, datetime | None, datetime | None]:
+        """(currently on, next start of an 'on' period, end of the running one)."""
         if entity_id is None:
-            return None, None
+            return None, None, None
         state = self.state(entity_id)
         if state is None:
-            return None, None
+            return None, None, None
         on = state.state == STATE_ON
         next_event = _to_datetime(state.attributes.get("next_event"))
-        return on, (next_event if not on else None)
+        return on, (next_event if not on else None), (next_event if on else None)
 
 
 def build_snapshot(
@@ -395,12 +398,13 @@ def build_snapshot(
             )
         )
         if room.kind is RoomKind.REGULATED:
-            schedule_on, next_on = reader.schedule(room.schedule)
+            schedule_on, next_on, schedule_ends = reader.schedule(room.schedule)
             controls.append(
                 RoomControlInput(
                     room_id=room.room_id,
                     schedule_on=schedule_on,
                     next_schedule_on=next_on,
+                    schedule_ends=schedule_ends,
                     trvs=tuple(
                         TrvInput(
                             entity_id=entity_id,
@@ -444,6 +448,7 @@ def build_snapshot(
         actuator_active=control.actuator_active,
         room_control_enabled=control.room_control_enabled,
         learned_schedule_enabled=control.learned_schedule_enabled,
+        network_enabled=control.network_enabled,
         vacation_active=control.vacation_active,
         present=reader.presence(config.presence),
         room_controls=tuple(controls),

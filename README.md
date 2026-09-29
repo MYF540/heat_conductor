@@ -23,6 +23,10 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
 - Brennerbewusst: ein laufender Brenner wird nicht abgeschaltet, und nach einem Brennerlauf
   endet die Freigabe, wenn der Bedarf für einen Neustart nicht reicht
 - Freigabe endet, wenn alle Räume über Soll liegen
+- **Wärmeverbund:** jede Freigabe wird für möglichst viele Räume genutzt – Räume, die bald
+  selbst Wärme bräuchten, heizen mit, weitere Räume öffnen, bis der Kessel genug Wärme loswird,
+  und die Restwärme aus Kessel und Rohren geht nach der Freigabe in die Räume. Ergebnis: weniger,
+  längere Brennerläufe
 - Heizgrenze auf geglätteter Außentemperatur, aufgehoben bei kalter Wettervorhersage
 - Sicherheit: veraltete Werte, Sicherheitsabschaltung ohne Daten, Übertemperatur, Frostschutz,
   Erkennung manuellen Schaltens, **Relais-Watchdog** auf dem Shelly, **Reparaturhinweise** in HA
@@ -48,6 +52,8 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
 **Lernen**
 - Aufheizrate je Raum (nach Außentemperatur), Auskühl-Zeitkonstante, Totzeit
 - Brennerzyklen, Heizkurve des Kesselreglers
+- **Wärmeverbund:** benötigte offene Heizfläche für eine Ziel-Brennerlaufzeit (aus jedem
+  Brennerlauf) und das Nachheizen der Heizkörper je Raum
 - **Heizkurven-Empfehlung:** aus Ventilöffnungen, Raumtemperaturen und Vorlauf entsteht je
   Außentemperatur-Bereich ein Vorschlag für eine passendere Heizkurve des Kesselreglers
 - **Vorausschauend heizen:** aus der Anwesenheit gelernte Ankunftszeiten; vorgeheizt wird
@@ -61,7 +67,8 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
 **Panel „HeatConductor“ in der Seitenleiste**
 - *Übersicht:* Zustandsautomat, Grund, Zeitschutz, Räume, Verläufe (24 h / 7 Tage)
 - *Parameter:* jeder Parameter erklärt, mit Wirkung, Standard, Bereich; Änderungen wirken sofort
-- *Lernen:* gelernte Werte, Diagramme, Lernverlauf, Heizkurven-Empfehlung
+- *Lernen:* gelernte Werte, Diagramme, Lernverlauf, Heizkurven-Empfehlung, Heizfläche und
+  Brennerlaufzeit, Tageswerte mit und ohne Wärmeverbund
 - *Zeitplan:* Anwesenheit je Wochentag, der vorgeschlagene Wochenplan und die Nachtabsenkung
 - *Was-wäre-wenn:* aufgezeichnete Daten mit geänderten Parametern durchspielen
 - *Protokoll:* wer hat wann welchen Parameter geändert
@@ -259,6 +266,49 @@ Die brennerbewussten Regeln brauchen einen Brenner-Sensor (z. B. X6 *Flamme*) od
 und wirken nur, wenn HeatConductor das Relais wirklich schaltet (nicht im Beobachtungsmodus).
 Im Panel zeigt die Übersicht die Brennerstarts der laufenden Freigabe.
 
+### Wärmeverbund
+
+Der Kessel kann nicht unter seine Mindestleistung. Sind nur wenige Heizkörper offen, ist das
+Wasser nach wenigen Minuten zu warm und der Brenner geht wieder aus: viele kurze Brennerläufe.
+Der Wärmeverbund betrachtet deshalb alle Räume zusammen:
+
+| Baustein | Verhalten |
+|---|---|
+| Mitheizen, Bedarf bald | Während einer Freigabe heizen Räume mit, die innerhalb des **Horizonts** (Standard 3 h) selbst Wärme bräuchten. Wer am schnellsten auskühlt, kommt zuerst dran. Ziel ist die Temperatur, mit der der Raum den Horizont übersteht, höchstens Soll + **Vorrat** (Standard +1 K). |
+| Mitheizen, Kessel-Abnahme | Ist weniger Heizfläche offen, als der Kessel für einen Brennerlauf von 10 min braucht, öffnen weitere Räume bis Soll + Vorrat. |
+| Räume in Eco | Nur kurz vor ihrer Komfortzeit (Zeitplan, erwartete Ankunft, Ende der Nacht) und nur bis Komfort. |
+| Restwärme | Nach der Freigabe bleiben Räume offen, solange die Pumpe nachläuft und der Vorlauf noch warm ist (höchstens 15 min). |
+| Bündeln | Reicht die offene Heizfläche nicht und braucht ein anderer Raum bald Wärme, wartet der Start bis zu 30 min auf ihn. Ein großes Defizit startet sofort. |
+
+Geöffnet wird ein Raum über seine Thermostate: HeatConductor schreibt die **Öffnungstemperatur**
+(Standard 25 °C) und setzt das normale Soll zurück, sobald der Raum sein Ziel minus dem gelernten
+Nachheizen der Heizkörper erreicht hat. Mitgeheizte Räume zählen nicht zum Wärmebedarf, ihr
+offenes Ventil verlängert also keine Freigabe.
+
+Gelernt wird:
+- **Benötigte Heizfläche:** Jeder Brennerlauf innerhalb einer Freigabe zeigt, wie lange der
+  Brenner bei wie viel offener Heizfläche läuft. Daraus folgt, wie viele voll offene Heizkörper
+  eine Ziel-Brennerlaufzeit ergeben. Bis dahin gilt der Startwert von 4 Heizkörpern.
+- **Nachheizen je Raum:** wie weit der Raum nach dem Schließen noch wärmer wird. Bis dahin gilt 0,3 K.
+- **Auskühlen je Raum:** die schon bekannte Auskühl-Zeitkonstante bestimmt, wann ein Raum Wärme
+  braucht. Bis dahin gilt ein gut gedämmter Raum (40 h).
+
+Schutz und Bedienung:
+- Nie bei offenem Fenster, Sonnengewinn, Boost, manueller Übersteuerung, Urlaub oder Abwesenheit
+  ohne erwartete Ankunft, nachts nur kurz vor dem Aufstehen. Heizt der Kessel trotz Freigabe
+  nicht, wird nichts mitgeheizt.
+- Neue Vorgänge nur mit 20 % Reserve unter der Duty-Cycle-Grenze, höchstens 6 je Raum und Tag,
+  höchstens 2 h je Vorgang. Eine Handänderung am Thermostat wird übernommen und beendet das Mitheizen.
+- Ausgeführt wird nur mit Schalter **Wärmeverbund**, eingeschalteter Raumsteuerung und außerhalb
+  des Beobachtungsmodus. Sonst zeigt das Panel, was passieren würde (*Vorschau*).
+- Je Raum lässt sich das Mitheizen mit dem Schalter **Mitheizen** ausschließen, z. B. für einen
+  kaum gedämmten, abgetrennten Raum.
+- Wird die Raumsteuerung ausgeschaltet oder HeatConductor neu gestartet, bekommen geöffnete
+  Thermostate ihr Soll zurück.
+
+Ob es wirkt, zeigt der Reiter *Lernen*: Freigaben, Brennerstarts, mittlere Laufzeit, Läufe
+unter 3 min, Mitheiz-Vorgänge und Gas je Gradtag, getrennt nach Tagen mit und ohne Wärmeverbund.
+
 ### Relais-Watchdog (Shelly)
 
 Das Skript [shelly/heatconductor_watchdog.js](shelly/heatconductor_watchdog.js) läuft auf dem
@@ -340,6 +390,8 @@ Kessel-ESP mit Vor-/Rücklauf: siehe [esphome/README.md](esphome/README.md). Vai
 | je Raum: Bedarf, Temperatur, Status | Attribute: Soll, Defizit, Ventil, Gewichtung |
 | je Raum: Nutzungserkennung, Raum genutzt | nur bei konfigurierten Geräten zur Nutzungserkennung |
 | Vorausschauend heizen | an = Räume ohne Zeitplan-Helfer heizen nach erwarteter und tatsächlicher Anwesenheit |
+| Wärmeverbund | an = Freigaben heizen weitere Räume mit und nutzen die Restwärme |
+| je Raum: Mitheizen, Wird mitgeheizt | Raum darf mitgeheizt werden; mitgeheizt gerade (Attribute: Ziel, Grund, nächster Bedarf, Vorschau) |
 | Urlaub | Urlaub aktiv (Attribute: geplant oder automatisch, seit wann, niemand zu Hause seit) |
 | Schlafen | Nachtabsenkung aktiv (Attribute: Auslöser, seit wann, Zustand des Schlafsensors) |
 | je Raum: gelernte Aufheizrate, gelernte Auskühl-Zeitkonstante | Diagnose |

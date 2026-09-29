@@ -65,7 +65,8 @@
           "usage": "Nutzungserkennung",
           "sleep": "Nacht und Schlaf",
           "vacation": "Urlaub",
-          "learning": "Lernen und Vorausschau"
+          "learning": "Lernen und Vorausschau",
+          "network": "Wärmeverbund"
         }
       },
       "entities": {
@@ -257,6 +258,34 @@
           "default_preheat": "Vorlauf vor der erwarteten Ankunft, solange die Aufheizrate eines Raums noch nicht gelernt ist.",
           "wake_preheat": "Endet das Nachtfenster (fest oder gelernt), werden die Räume so früh wieder aufgeheizt, dass sie zum Aufstehen warm sind."
         }
+      },
+      "network": {
+        "title": "Wärmeverbund",
+        "description": "Jede Freigabe wird für möglichst viele Räume genutzt: Räume, die bald selbst Wärme bräuchten, werden mitgeheizt, weitere Räume öffnen, solange der Kessel zu wenig Wärme loswird, und nach der Freigabe geht die Restwärme aus Kessel und Rohren in die Räume. Eingeschaltet wird der Wärmeverbund mit dem Schalter „Wärmeverbund“, je Raum abschaltbar mit „Mitheizen“.",
+        "data": {
+          "opening_temperature": "Öffnungstemperatur",
+          "co_heat_reserve": "Vorrat über Soll",
+          "co_heat_horizon": "Horizont",
+          "preheat_pull": "Vorheizen vorziehen um höchstens",
+          "residual_use": "Restwärme nach der Freigabe nutzen",
+          "residual_max": "Restwärme höchstens",
+          "target_burner_run": "Ziel-Brennerlaufzeit",
+          "default_sink": "Offene Heizkörper ohne Lernwerte",
+          "bundle_wait": "Start bündeln, höchstens warten",
+          "co_heat_max_per_day": "Mitheizen je Raum und Tag höchstens"
+        },
+        "data_description": {
+          "opening_temperature": "Diese Solltemperatur öffnet das Thermostat ganz. HeatConductor schreibt danach selbst wieder das normale Soll.",
+          "co_heat_reserve": "So weit darf ein Raum in seiner Komfortzeit über sein Soll geheizt werden.",
+          "co_heat_horizon": "So lange soll ein mitgeheizter Raum ohne eigenen Wärmebedarf auskommen. Räume, die innerhalb dieser Zeit Bedarf hätten, heizen mit.",
+          "preheat_pull": "Ein Raum in Eco heizt mit, wenn sein eigenes Vorheizen vor dem Komfortbeginn höchstens so viel später ohnehin beginnen würde.",
+          "residual_use": "Nach dem Ende der Freigabe bleiben Räume offen, solange die Pumpe nachläuft und der Vorlauf noch warm ist.",
+          "residual_max": "Längste Zeit für die Restwärme nach einer Freigabe.",
+          "target_burner_run": "So lange soll ein Brennerlauf mindestens dauern. Daraus folgt, wie viele Heizkörper offen sein müssen.",
+          "default_sink": "Voll offene Heizkörper, die der Kessel für die Ziel-Brennerlaufzeit braucht, solange das noch nicht gelernt ist.",
+          "bundle_wait": "Reicht die offene Heizfläche nicht und braucht ein weiterer Raum bald Wärme, wartet der Start so lange auf ihn. 0 schaltet das Bündeln aus.",
+          "co_heat_max_per_day": "Schont Batterien und Funk: jedes Mitheizen kostet zwei Befehle je Thermostat."
+        }
       }
     },
     "error": {
@@ -366,6 +395,9 @@
       },
       "sleep": {
         "name": "Schlafen"
+      },
+      "co_heating_active": {
+        "name": "Wird mitgeheizt"
       }
     },
     "select": {
@@ -423,7 +455,8 @@
           "demand_satisfied": "Bedarf gedeckt",
           "residual_heat": "Alle Räume über Soll",
           "burner_finishing": "Brennerlauf wird zu Ende geführt",
-          "burner_cycle_done": "Brennerlauf beendet, Bedarf gering"
+          "burner_cycle_done": "Brennerlauf beendet, Bedarf gering",
+          "bundling": "Start gebündelt, wartet auf weiteren Raum"
         }
       },
       "outdoor_temperature": {
@@ -527,6 +560,12 @@
       },
       "usage_detection": {
         "name": "Nutzungserkennung"
+      },
+      "heat_network": {
+        "name": "Wärmeverbund"
+      },
+      "co_heating": {
+        "name": "Mitheizen"
       }
     },
     "climate": {

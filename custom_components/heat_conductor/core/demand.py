@@ -25,6 +25,8 @@ class RoomInput:
     effective_target: float | None = None
     # Strong sun on a room with large glass area: ignore the temperature deficit.
     solar_active: bool = False
+    # Co-heated by the heat network: its open valve is no demand of its own.
+    ignore_valve: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,7 +101,7 @@ def evaluate_room(room: RoomInput, now: datetime, params: ControlParams) -> Room
         return result(RoomStatus.WINDOW_OPEN, 0.0)
 
     components: list[float] = []
-    if valve is not None:
+    if valve is not None and not room.ignore_valve:
         components.append(valve)
     if deficit is not None and params.deficit_full_scale > 0 and not room.solar_active:
         components.append(min(max(deficit / params.deficit_full_scale, 0.0), 1.0))

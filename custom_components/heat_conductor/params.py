@@ -19,9 +19,13 @@ from .const import (
     CONF_AUTO_VACATION_RETURN,
     CONF_BOOST_DURATION,
     CONF_BOOST_TEMP,
+    CONF_BUNDLE_WAIT,
     CONF_BURNER_FLOW_THRESHOLD,
     CONF_BURNER_MAX_POWER,
     CONF_CALORIFIC_VALUE,
+    CONF_CO_HEAT_HORIZON,
+    CONF_CO_HEAT_MAX_PER_DAY,
+    CONF_CO_HEAT_RESERVE,
     CONF_COMPENSATION_MAX,
     CONF_CONDENSING_RETURN_LIMIT,
     CONF_CURVE_SETTING,
@@ -29,6 +33,7 @@ from .const import (
     CONF_DEFAULT_COMFORT,
     CONF_DEFAULT_ECO,
     CONF_DEFAULT_PREHEAT,
+    CONF_DEFAULT_SINK,
     CONF_DEFICIT_FULL_SCALE,
     CONF_DUTY_CYCLE_LIMIT,
     CONF_END_AFTER_BURNER_CYCLE,
@@ -47,17 +52,22 @@ from .const import (
     CONF_MIN_RUN,
     CONF_NIGHT_END,
     CONF_NIGHT_START,
+    CONF_OPENING_TEMPERATURE,
     CONF_OPTIMUM_START,
     CONF_OPTIMUM_START_MAX_LEAD,
     CONF_OUTDOOR_SMOOTHING,
     CONF_OVERRIDE_DURATION,
+    CONF_PREHEAT_PULL,
     CONF_RESIDUAL_HEAT,
+    CONF_RESIDUAL_MAX,
+    CONF_RESIDUAL_USE,
     CONF_SLEEP_CONFIRM,
     CONF_SOLAR_REFERENCE,
     CONF_STALE_AFTER,
     CONF_START_CONFIRM,
     CONF_START_THRESHOLD,
     CONF_STOP_THRESHOLD,
+    CONF_TARGET_BURNER_RUN,
     CONF_USAGE_HOLD,
     CONF_USAGE_IN_ECO,
     CONF_USE_FORECAST,
@@ -70,6 +80,7 @@ from .const import (
 )
 from .core.energy import EnergyParams
 from .core.models import ControlParams
+from .core.network import NetworkParams
 from .core.setpoint import SetpointParams
 from .core.sleep import SleepParams, parse_time_of_day
 from .core.vacation import VacationParams
@@ -170,6 +181,16 @@ PARAMS: tuple[ParamMeta, ...] = (
     _n(CONF_SOLAR_REFERENCE, "learning", "kW", 0, 100, 0.1),
     _n(CONF_CURVE_SETTING, "learning", None, 0, 4, 0.05),
     _n(CONF_CURVE_TARGET_VALVE, "learning", "%", 50, 100, 5),
+    _n(CONF_OPENING_TEMPERATURE, "network", "°C", 18, 30, 0.5),
+    _n(CONF_CO_HEAT_RESERVE, "network", "K", 0, 3, 0.1),
+    _n(CONF_CO_HEAT_HORIZON, "network", "min", 30, 720, 15),
+    _n(CONF_PREHEAT_PULL, "network", "min", 0, 240, 15),
+    _b(CONF_RESIDUAL_USE, "network"),
+    _n(CONF_RESIDUAL_MAX, "network", "min", 0, 60, 1),
+    _n(CONF_TARGET_BURNER_RUN, "network", "min", 3, 60, 1),
+    _n(CONF_DEFAULT_SINK, "network", None, 1, 20, 0.5),
+    _n(CONF_BUNDLE_WAIT, "network", "min", 0, 120, 5),
+    _n(CONF_CO_HEAT_MAX_PER_DAY, "network", None, 1, 48, 1),
 )
 PARAMS_BY_KEY: dict[str, ParamMeta] = {meta.key: meta for meta in PARAMS}
 GROUPS: tuple[str, ...] = tuple(dict.fromkeys(meta.group for meta in PARAMS))
@@ -296,6 +317,26 @@ def curve_advice_params(options: dict[str, Any]) -> tuple[float, float]:
     return (
         float(_value(options, CONF_CURVE_TARGET_VALVE)) / 100,
         float(_value(options, CONF_CURVE_SETTING)),
+    )
+
+
+def network_params(options: dict[str, Any]) -> NetworkParams:
+    """Heat network: co-heating, residual heat and bundling."""
+
+    def f(key: str) -> float:
+        return float(_value(options, key))
+
+    return NetworkParams(
+        opening_temperature=f(CONF_OPENING_TEMPERATURE),
+        reserve=f(CONF_CO_HEAT_RESERVE),
+        horizon=timedelta(minutes=f(CONF_CO_HEAT_HORIZON)),
+        preheat_pull=timedelta(minutes=f(CONF_PREHEAT_PULL)),
+        residual_use=bool(_value(options, CONF_RESIDUAL_USE)),
+        residual_max=timedelta(minutes=f(CONF_RESIDUAL_MAX)),
+        target_run=timedelta(minutes=f(CONF_TARGET_BURNER_RUN)),
+        default_sink=f(CONF_DEFAULT_SINK),
+        bundle_wait=timedelta(minutes=f(CONF_BUNDLE_WAIT)),
+        max_per_day=int(f(CONF_CO_HEAT_MAX_PER_DAY)),
     )
 
 

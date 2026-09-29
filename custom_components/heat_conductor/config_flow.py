@@ -296,6 +296,7 @@ class HeatConductorOptionsFlow(OptionsFlow):
                 "sleep",
                 "vacation",
                 "learning",
+                "network",
             ],
         )
 
@@ -373,6 +374,12 @@ class HeatConductorOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         """Edit learning and anticipation parameters."""
         return await self._group_step("learning", user_input)
+
+    async def async_step_network(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Edit the heat network: co-heating, residual heat and bundling."""
+        return await self._group_step("network", user_input)
 
     async def _group_step(self, group: str, user_input: dict[str, Any] | None) -> ConfigFlowResult:
         if user_input is not None:

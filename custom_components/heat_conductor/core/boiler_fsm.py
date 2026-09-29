@@ -41,6 +41,8 @@ class BoilerInputs:
     relay_on: bool | None
     forecast_outdoor: float | None = None
     burner_on: bool | None = None  # the real burner (sensor or gas flow)
+    # Heat network: wait this long for another room before starting (None = do not wait).
+    bundle_wait: timedelta | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -224,6 +226,11 @@ class BoilerController:
                     BoilerState.OFF,
                     Reason.WAITING_CONFIRMATION,
                     remaining=p.start_confirm - waited,
+                )
+            if inp.bundle_wait is not None and waited < inp.bundle_wait:
+                # Too few radiators for a sensible burner run, another room joins soon.
+                return self._decide(
+                    BoilerState.OFF, Reason.BUNDLING, remaining=inp.bundle_wait - waited
                 )
         return self._start(
             now, BoilerState.HEATING, Reason.DEFICIT_START if immediate else Reason.DEMAND_START

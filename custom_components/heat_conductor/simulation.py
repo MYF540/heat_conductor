@@ -15,7 +15,13 @@ from homeassistant.util import dt as dt_util
 from .coordinator import HeatConductorCoordinator
 from .core.engine import HeatingEngine
 from .inputs import ControlState, EntityConfig, InputReader, build_snapshot
-from .params import control_params, energy_params, setpoint_params, solar_reference
+from .params import (
+    control_params,
+    energy_params,
+    network_params,
+    setpoint_params,
+    solar_reference,
+)
 
 STEP = timedelta(minutes=1)
 SERIES_STEP = timedelta(minutes=5)
@@ -48,6 +54,7 @@ def _run(
         energy_params(options),
         setpoint_params(options),
         solar_reference(options),
+        network_params=network_params(options),
     )
     now = start
     request_prev: bool | None = None
@@ -142,6 +149,7 @@ async def async_simulate(
         room_control_enabled=False,
         learned_schedule_enabled=False,
         vacation_active=False,
+        network_enabled=coordinator.settings.network_enabled,
     )
     current_options = dict(coordinator.options)
     draft_options = {**current_options, **draft}

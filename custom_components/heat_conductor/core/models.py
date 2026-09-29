@@ -64,6 +64,7 @@ class Reason(StrEnum):
     RESIDUAL_HEAT = "residual_heat"
     BURNER_FINISHING = "burner_finishing"
     BURNER_CYCLE_DONE = "burner_cycle_done"
+    BUNDLING = "bundling"
 
 
 class RoomStatus(StrEnum):

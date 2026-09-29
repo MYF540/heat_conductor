@@ -14,6 +14,7 @@ import math
 from typing import Any
 
 from .curve_advice import CurveAdvisor
+from .network import SinkLearner
 from .presence import PresenceLearner
 from .sleep import NightPattern
 
@@ -32,6 +33,9 @@ MIN_ALPHA = 0.05
 POINTS_MAX = 150
 HISTORY_DAYS = 90
 CURVE_INTERVAL = timedelta(minutes=10)
+# After co-heating, the radiators keep heating: the highest rise within this time.
+OVERSHOOT_WINDOW = timedelta(minutes=60)
+MAX_OVERSHOOT = 3.0
 CURVE_DECAY = 0.998
 
 OUTDOOR_BINS: tuple[tuple[float, float, str], ...] = (
@@ -143,12 +147,14 @@ def _slope_per_hour(samples: list[Sample]) -> float | None:
 
 
 class RoomLearner:
-    """Heat-up rate, cooling time constant and dead time of one room."""
+    """Heat-up rate, cooling time constant, dead time and after-heating of one room."""
 
     def __init__(self) -> None:
         self.heat_rate: dict[str, Stat] = {"all": Stat()}
         self.cooling_tau = Stat()  # hours
         self.dead_time = Stat()  # minutes
+        self.overshoot = Stat()  # K the room still rises after its valve closed
+        self._overshoot: tuple[datetime, float, float] | None = None  # start, temp, max
         self.heat_points: deque[tuple[float, float]] = deque(maxlen=POINTS_MAX)
         self.cool_points: deque[tuple[float, float]] = deque(maxlen=POINTS_MAX)
         self.history: deque[dict[str, Any]] = deque(maxlen=HISTORY_DAYS)
@@ -170,6 +176,7 @@ class RoomLearner:
         window_open: bool,
     ) -> None:
         """Feed one evaluation."""
+        self._track_overshoot(now, temperature, window_open)
         if self._day != now.date():
             if self._day is not None and self.heat_rate["all"].count:
                 self.history.append(
@@ -197,6 +204,34 @@ class RoomLearner:
         self._learn_dead_time(sample, previous)
         self._learn_heating(now)
         self._learn_cooling(now)
+
+    def start_overshoot(self, now: datetime, temperature: float | None) -> None:
+        """A co-heat reached its goal: watch how far the room still rises."""
+        if temperature is not None:
+            self._overshoot = (now, temperature, temperature)
+
+    def _track_overshoot(self, now: datetime, temperature: float | None, window_open: bool) -> None:
+        if self._overshoot is None:
+            return
+        start, start_temp, highest = self._overshoot
+        if window_open:
+            self._overshoot = None
+            return
+        if temperature is not None:
+            highest = max(highest, temperature)
+        if now - start >= OVERSHOOT_WINDOW:
+            self.overshoot.add(min(max(highest - start_temp, 0.0), MAX_OVERSHOOT), now)
+            self._overshoot = None
+        else:
+            self._overshoot = (start, start_temp, highest)
+
+    def overshoot_value(self) -> float | None:
+        """Learned after-heating."""
+        return self.overshoot.mean if self.overshoot.usable() else None
+
+    def cooling_tau_value(self) -> float | None:
+        """Learned cooling time constant in hours."""
+        return self.cooling_tau.mean if self.cooling_tau.usable() else None
 
     def _learn_heating(self, now: datetime) -> None:
         window = list(self._samples)[-HEAT_WINDOW_SAMPLES:]
@@ -287,6 +322,7 @@ class RoomLearner:
             "heat_rate": {band: stat.summary(3) for band, stat in self.heat_rate.items()},
             "cooling_tau": self.cooling_tau.summary(1),
             "dead_time": self.dead_time.summary(0),
+            "overshoot": self.overshoot.summary(2),
             "heat_points": list(self.heat_points),
             "cool_points": list(self.cool_points),
             "history": list(self.history),
@@ -298,6 +334,7 @@ class RoomLearner:
             "heat_rate": {band: stat.to_dict() for band, stat in self.heat_rate.items()},
             "cooling_tau": self.cooling_tau.to_dict(),
             "dead_time": self.dead_time.to_dict(),
+            "overshoot": self.overshoot.to_dict(),
             "heat_points": list(self.heat_points),
             "cool_points": list(self.cool_points),
             "history": list(self.history),
@@ -315,6 +352,7 @@ class RoomLearner:
         learner.heat_rate.setdefault("all", Stat())
         learner.cooling_tau = Stat.from_dict(data.get("cooling_tau"))
         learner.dead_time = Stat.from_dict(data.get("dead_time"))
+        learner.overshoot = Stat.from_dict(data.get("overshoot"))
         learner.heat_points.extend(tuple(p) for p in data.get("heat_points", []))
         learner.cool_points.extend(tuple(p) for p in data.get("cool_points", []))
         learner.history.extend(data.get("history", []))
@@ -475,6 +513,7 @@ class Learner:
         self.presence = PresenceLearner()
         self.night = NightPattern()
         self.curve_advice = CurveAdvisor()
+        self.sink = SinkLearner()
 
     def room(self, room_id: str) -> RoomLearner:
         """Learner of a room (created on demand)."""
@@ -489,6 +528,7 @@ class Learner:
             self.presence = PresenceLearner()
             self.night = NightPattern()
             self.curve_advice = CurveAdvisor()
+            self.sink = SinkLearner()
         else:
             self.rooms.pop(room_id, None)
 
@@ -523,6 +563,7 @@ class Learner:
             "presence": self.presence.to_dict(),
             "night": self.night.to_dict(),
             "curve_advice": self.curve_advice.to_dict(),
+            "sink": self.sink.to_dict(),
         }
 
     @classmethod
@@ -540,4 +581,5 @@ class Learner:
         learner.presence = PresenceLearner.from_dict(data.get("presence"))
         learner.night = NightPattern.from_dict(data.get("night"))
         learner.curve_advice = CurveAdvisor.from_dict(data.get("curve_advice"))
+        learner.sink = SinkLearner.from_dict(data.get("sink"))
         return learner

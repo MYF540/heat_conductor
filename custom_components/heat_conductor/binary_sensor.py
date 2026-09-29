@@ -38,10 +38,15 @@ async def async_setup_entry(
         entities.append(SleepSensor(coordinator))
     async_add_entities(entities)
     for room in coordinator.rooms:
-        if room.kind is RoomKind.REGULATED and room.usage_entities:
-            async_add_entities(
-                [RoomInUseSensor(coordinator, room)], config_subentry_id=room.room_id
-            )
+        if room.kind is not RoomKind.REGULATED:
+            continue
+        room_entities: list[BinarySensorEntity] = []
+        if room.usage_entities:
+            room_entities.append(RoomInUseSensor(coordinator, room))
+        if room.climates:
+            room_entities.append(RoomCoHeatingSensor(coordinator, room))
+        if room_entities:
+            async_add_entities(room_entities, config_subentry_id=room.room_id)
 
 
 class VacationSensor(HeatConductorEntity, BinarySensorEntity):
@@ -120,6 +125,46 @@ class RoomInUseSensor(RoomEntity, BinarySensorEntity):
             "last_activity": last.isoformat() if last else None,
             "detection_enabled": runtime.usage_enabled,
             "activity_entities": list(self.room.usage_entities),
+        }
+
+
+class RoomCoHeatingSensor(RoomEntity, BinarySensorEntity):
+    """On while the heat network heats this room along."""
+
+    _attr_device_class = BinarySensorDeviceClass.HEAT
+
+    def __init__(self, coordinator: HeatConductorCoordinator, room: RoomConfig) -> None:
+        super().__init__(coordinator, room, "co_heating_active")
+
+    def _plan(self):  # type: ignore[no-untyped-def]
+        data = self.coordinator.data
+        return data.network.room(self.room.room_id) if data else None
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return whether the room is co-heated right now."""
+        plan = self._plan()
+        if plan is None:
+            return None
+        return plan.active and self.coordinator.data.network.executing
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Goal, reason, the next expected demand and whether it is only a preview."""
+        plan = self._plan()
+        network = self.coordinator.data.network if self.coordinator.data else None
+        if plan is None or network is None:
+            return {}
+        return {
+            "preview": plan.active and not network.executing,
+            "reason": plan.reason.value if plan.reason else None,
+            "goal": round(plan.goal, 1) if plan.goal is not None else None,
+            "since": plan.since.isoformat() if plan.since else None,
+            "next_demand_in_min": round(plan.need_in.total_seconds() / 60)
+            if plan.need_in is not None
+            else None,
+            "co_heats_today": plan.today,
+            "allowed": self.coordinator.engine.runtime(self.room.room_id).co_heat_enabled,
         }
 
 

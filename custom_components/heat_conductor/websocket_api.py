@@ -111,6 +111,8 @@ def build_state(hass: HomeAssistant, coordinator: HeatConductorCoordinator) -> d
                 "enabled": runtime.enabled if runtime else None,
                 "usage_entities": len(room.usage_entities),
                 "usage_enabled": runtime.usage_enabled if runtime else None,
+                "co_heat_enabled": runtime.co_heat_enabled if runtime else None,
+                "radiators": len(room.climates),
                 "in_use": setpoint.room_active if setpoint else None,
                 "temperature_entity": entity_id("sensor", f"{room.room_id}_room_temperature"),
                 "target_entity": entity_id("sensor", f"{room.room_id}_room_target"),
@@ -193,6 +195,7 @@ def build_state(hass: HomeAssistant, coordinator: HeatConductorCoordinator) -> d
                 "occupancy": result.occupancy,
                 "next_arrival": _jsonable(result.next_arrival),
             },
+            "network": result.network.as_dict(),
             "duty_cycle_ok": result.duty_cycle_ok,
             "solar_ratio": result.solar_ratio,
         }
@@ -306,7 +309,15 @@ async def ws_learning(
     summary = coordinator.engine.learner.summary(
         names, target_valve=target_valve, curve_setting=curve_setting
     )
-    connection.send_result(msg["id"], {**summary, "can_edit": connection.user.is_admin})
+    np_ = coordinator.engine.network_params
+    energy = coordinator.data.energy if coordinator.data else None
+    network = {
+        "sink": coordinator.engine.learner.sink.summary(np_.target_run, np_.default_sink),
+        "kpi": coordinator.engine.network.kpi.summary(energy),
+    }
+    connection.send_result(
+        msg["id"], {**summary, "network": network, "can_edit": connection.user.is_admin}
+    )
 
 
 @websocket_api.require_admin

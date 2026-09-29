@@ -65,7 +65,8 @@
           "usage": "Usage detection",
           "sleep": "Night and sleep",
           "vacation": "Vacation",
-          "learning": "Learning and anticipation"
+          "learning": "Learning and anticipation",
+          "network": "Heat network"
         }
       },
       "entities": {
@@ -257,6 +258,34 @@
           "default_preheat": "Lead time before the expected arrival while a room's heat-up rate is not learned yet.",
           "wake_preheat": "When the night window (fixed or learned) ends, the rooms are heated early enough to be warm when people get up."
         }
+      },
+      "network": {
+        "title": "Heat network",
+        "description": "Every release is used for as many rooms as makes sense: rooms that would soon need heat are heated along, further rooms open while the boiler cannot get rid of enough heat, and after the release the residual heat of boiler and pipes goes into the rooms. The heat network is turned on with the switch “Heat network” and can be turned off per room with “Co-heating”.",
+        "data": {
+          "opening_temperature": "Opening temperature",
+          "co_heat_reserve": "Reserve above target",
+          "co_heat_horizon": "Horizon",
+          "preheat_pull": "Pull preheating forward by at most",
+          "residual_use": "Use residual heat after the release",
+          "residual_max": "Residual heat at most",
+          "target_burner_run": "Target burner run",
+          "default_sink": "Open radiators without learned values",
+          "bundle_wait": "Bundle starts, wait at most",
+          "co_heat_max_per_day": "Co-heats per room and day at most"
+        },
+        "data_description": {
+          "opening_temperature": "This target opens the thermostat fully. HeatConductor writes the normal target back itself.",
+          "co_heat_reserve": "How far a room may be heated above its target during its comfort period.",
+          "co_heat_horizon": "How long a co-heated room should last without demand of its own. Rooms that would need heat within this time are heated along.",
+          "preheat_pull": "A room in eco is heated along when its own preheating before the comfort period would start at most this much later anyway.",
+          "residual_use": "After the release rooms stay open while the pump runs on and the flow is still warm.",
+          "residual_max": "Longest time for using the residual heat after a release.",
+          "target_burner_run": "A burner run should last at least this long. This decides how many radiators have to be open.",
+          "default_sink": "Fully open radiators the boiler needs for the target burner run, until this is learned.",
+          "bundle_wait": "If the open heating surface is too small and another room needs heat soon, the start waits this long for it. 0 turns bundling off.",
+          "co_heat_max_per_day": "Saves batteries and radio: every co-heat costs two commands per thermostat."
+        }
       }
     },
     "error": {
@@ -366,6 +395,9 @@
       },
       "sleep": {
         "name": "Sleeping"
+      },
+      "co_heating_active": {
+        "name": "Co-heated"
       }
     },
     "select": {
@@ -423,7 +455,8 @@
           "demand_satisfied": "Demand satisfied",
           "residual_heat": "All rooms above target",
           "burner_finishing": "Letting the burner cycle finish",
-          "burner_cycle_done": "Burner cycle done, demand low"
+          "burner_cycle_done": "Burner cycle done, demand low",
+          "bundling": "Start bundled, waiting for another room"
         }
       },
       "outdoor_temperature": {
@@ -527,6 +560,12 @@
       },
       "usage_detection": {
         "name": "Usage detection"
+      },
+      "heat_network": {
+        "name": "Heat network"
+      },
+      "co_heating": {
+        "name": "Co-heating"
       }
     },
     "climate": {

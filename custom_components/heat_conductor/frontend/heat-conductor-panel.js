@@ -46,8 +46,42 @@ const I18N = {
       start_stop: "Start und Stopp", cycle_protection: "Takt-Schutz", heating_limit: "Heizgrenze und Frost",
       safety: "Sicherheit", sensors: "Sensorik", energy: "Energie und Gas",
       room_control: "Raumsteuerung", usage: "Nutzungserkennung", sleep: "Nacht und Schlaf", vacation: "Urlaub",
-      learning: "Lernen und Vorausschau",
+      learning: "Lernen und Vorausschau", network: "Wärmeverbund",
     },
+    network: "Wärmeverbund",
+    networkIntro: "Jede Freigabe wird für möglichst viele Räume genutzt: Räume, die bald selbst Wärme bräuchten, heizen mit, weitere Räume öffnen, solange der Kessel zu wenig Wärme loswird, und nach der Freigabe geht die Restwärme in die Räume.",
+    networkState: "Status",
+    networkStates: { active: "aktiv", switch_off: "aus – nur Vorschau", room_control_off: "Vorschau – Raumsteuerung ist aus", observation_mode: "Vorschau – Beobachtungsmodus" },
+    networkPhase: "Gerade",
+    phases: { idle: "Ruhe", release: "Freigabe", residual: "Restwärme wird genutzt" },
+    heatingSurface: "Offene Heizfläche",
+    heatingSurfaceNeeded: "benötigt",
+    radiatorsUnit: "Heizkörper",
+    learnedTag: "gelernt", startValue: "Startwert",
+    nextNeed: "Nächster Wärmebedarf",
+    bundling: "Start wartet auf",
+    coHeatedNow: "Mitgeheizt",
+    wouldCoHeat: "Würde mitheizen",
+    none: "keiner",
+    coHeat: "Verbund",
+    coHeatUntil: "bis",
+    coHeatReasons: { soon: "bald Bedarf", preheat: "Komfort beginnt bald", sink: "Kessel-Abnahme" },
+    coHeatOff: "ausgeschlossen",
+    needIn: "Bedarf in",
+    needNow: "jetzt",
+    coHeatPreview: "Vorschau",
+    overshoot: "Nachheizen",
+    usedOvershoot: "Wie weit der Raum nach dem Schließen noch wärmer wird. Das Mitheizen endet um so viel früher.",
+    sinkTitle: "Heizfläche und Brennerlaufzeit",
+    sinkIntro: "Jeder Brennerlauf innerhalb einer Freigabe (ohne den ersten) zeigt, wie lange der Brenner bei wie viel offener Heizfläche läuft. Daraus folgt, wie viele Heizkörper offen sein müssen, damit ein Lauf die Ziel-Laufzeit erreicht.",
+    sinkNeeded: "Benötigt für {minutes} min",
+    sinkContinuous: "Brenner läuft durch ab",
+    sinkPoints: "Brennerlaufzeit (min) über offener Heizfläche (Heizkörper)",
+    kpiTitle: "Tageswerte mit und ohne Wärmeverbund",
+    kpiDay: "Tag", kpiNetwork: "Verbund", kpiReleases: "Freigaben", kpiStarts: "Brennerstarts",
+    kpiMeanRun: "Ø Lauf", kpiShort: "unter 3 min", kpiCoHeats: "Mitheizen", kpiGas: "Gas",
+    kpiPerDegreeDay: "je Gradtag", kpiToday: "heute",
+    kpiAverage: "Mittel", kpiWith: "mit Verbund", kpiWithout: "ohne Verbund",
     learningIntro: "Gelernte Werte mit Anzahl der Messungen und Streuung. Werte werden erst ab 3 Messungen verwendet.",
     heatRate: "Aufheizrate", coolingTau: "Auskühl-Zeitkonstante", deadTime: "Totzeit",
     samples: "Messungen", mean: "Mittel", std: "Streuung", band: "Außentemperatur",
@@ -143,8 +177,42 @@ const I18N = {
       start_stop: "Start and stop", cycle_protection: "Cycle protection", heating_limit: "Heating limit and frost",
       safety: "Safety", sensors: "Sensors", energy: "Energy and gas",
       room_control: "Room control", usage: "Usage detection", sleep: "Night and sleep", vacation: "Vacation",
-      learning: "Learning and anticipation",
+      learning: "Learning and anticipation", network: "Heat network",
     },
+    network: "Heat network",
+    networkIntro: "Every release is used for as many rooms as makes sense: rooms that would soon need heat are heated along, further rooms open while the boiler cannot get rid of enough heat, and after the release the residual heat goes into the rooms.",
+    networkState: "State",
+    networkStates: { active: "active", switch_off: "off – preview only", room_control_off: "preview – room control is off", observation_mode: "preview – observation mode" },
+    networkPhase: "Now",
+    phases: { idle: "idle", release: "release", residual: "using residual heat" },
+    heatingSurface: "Open heating surface",
+    heatingSurfaceNeeded: "needed",
+    radiatorsUnit: "radiators",
+    learnedTag: "learned", startValue: "start value",
+    nextNeed: "Next heat demand",
+    bundling: "Start waits for",
+    coHeatedNow: "Co-heated",
+    wouldCoHeat: "Would co-heat",
+    none: "none",
+    coHeat: "Network",
+    coHeatUntil: "to",
+    coHeatReasons: { soon: "demand soon", preheat: "comfort begins soon", sink: "boiler needs a sink" },
+    coHeatOff: "excluded",
+    needIn: "Demand in",
+    needNow: "now",
+    coHeatPreview: "preview",
+    overshoot: "After-heating",
+    usedOvershoot: "How much warmer the room still gets after its valve closed. Co-heating ends this much earlier.",
+    sinkTitle: "Heating surface and burner run",
+    sinkIntro: "Every burner run within a release (except the first) shows how long the burner runs with how much open heating surface. This tells how many radiators must be open for a run to reach the target run time.",
+    sinkNeeded: "Needed for {minutes} min",
+    sinkContinuous: "Burner runs continuously from",
+    sinkPoints: "Burner run (min) over open heating surface (radiators)",
+    kpiTitle: "Daily figures with and without the heat network",
+    kpiDay: "Day", kpiNetwork: "Network", kpiReleases: "Releases", kpiStarts: "Burner starts",
+    kpiMeanRun: "Ø run", kpiShort: "under 3 min", kpiCoHeats: "Co-heats", kpiGas: "Gas",
+    kpiPerDegreeDay: "per degree day", kpiToday: "today",
+    kpiAverage: "Average", kpiWith: "with network", kpiWithout: "without network",
     learningIntro: "Learned values with sample count and spread. Values are used from 3 samples on.",
     heatRate: "Heat-up rate", coolingTau: "Cooling time constant", deadTime: "Dead time",
     samples: "Samples", mean: "Mean", std: "Spread", band: "Outdoor temperature",
@@ -264,6 +332,16 @@ const PARAM_TEXT = {
     optimum_start_max_lead: ["Max. Vorlaufzeit optimaler Start", "Längste Zeit, die vor Zeitplanbeginn geheizt wird.", "Früherer Start bei großem Temperaturabstand."],
     residual_heat: ["Freigabe beenden, wenn alle Räume über Soll", "Beendet die Freigabe, wenn alle Räume über ihrem Sollwert liegen und der Gesamtbedarf unter der Start-Schwelle ist.", null],
     use_forecast: ["Wettervorhersage nutzen", "Kalte Vorhersagen heben die Heizgrenze auf und verlängern den optimalen Start.", null],
+    opening_temperature: ["Öffnungstemperatur", "Diese Solltemperatur öffnet das Thermostat eines mitgeheizten Raums ganz. HeatConductor schreibt danach selbst wieder das normale Soll.", null],
+    co_heat_reserve: ["Vorrat über Soll", "So weit darf ein Raum in seiner Komfortzeit über sein Soll geheizt werden.", "Längere Brennerläufe und seltener eigene Freigaben, aber Räume sind wärmer als nötig."],
+    co_heat_horizon: ["Horizont", "So lange soll ein mitgeheizter Raum ohne eigenen Wärmebedarf auskommen. Räume, die innerhalb dieser Zeit Bedarf hätten, heizen mit.", "Mehr Räume heizen mit, bis zum Vorrat."],
+    preheat_pull: ["Vorheizen vorziehen um höchstens", "Ein Raum in Eco heizt mit, wenn sein eigenes Vorheizen vor dem Komfortbeginn höchstens so viel später ohnehin beginnen würde.", "Mehr Vorheizen fällt in laufende Freigaben, aber die Wärme muss länger gehalten werden."],
+    residual_use: ["Restwärme nach der Freigabe nutzen", "Nach dem Ende der Freigabe bleiben Räume offen, solange die Pumpe nachläuft und der Vorlauf noch warm ist.", null],
+    residual_max: ["Restwärme höchstens", "Längste Zeit für die Restwärme nach einer Freigabe.", "Mehr Restwärme wird genutzt, Ventile bleiben länger offen."],
+    target_burner_run: ["Ziel-Brennerlaufzeit", "So lange soll ein Brennerlauf mindestens dauern. Daraus folgt, wie viele Heizkörper offen sein müssen.", "Mehr Räume heizen mit, dafür weniger Brennerstarts."],
+    default_sink: ["Offene Heizkörper ohne Lernwerte", "Voll offene Heizkörper, die der Kessel für die Ziel-Brennerlaufzeit braucht, solange das noch nicht gelernt ist.", "Mehr Räume heizen mit, solange nichts gelernt ist."],
+    bundle_wait: ["Start bündeln, höchstens warten", "Reicht die offene Heizfläche nicht und braucht ein weiterer Raum bald Wärme, wartet der Start so lange auf ihn. 0 schaltet das Bündeln aus.", "Weniger Starts, aber der erste Raum wartet länger auf Wärme."],
+    co_heat_max_per_day: ["Mitheizen je Raum und Tag höchstens", "Schont Batterien und Funk: jedes Mitheizen kostet zwei Befehle je Thermostat.", "Mehr Mitheizen möglich, mehr Funkverkehr."],
     solar_reference: ["PV-Spitzenleistung (Sonnen-Proxy)", "Räume mit Sonnengewinnen ignorieren ihr Defizit ab 40 % dieser Leistung. 0 = aus.", "Sonnen-Proxy greift erst bei stärkerer Sonne."],
   },
   en: {
@@ -319,6 +397,16 @@ const PARAM_TEXT = {
     optimum_start_max_lead: ["Max optimum start lead", "Longest heating time before the schedule begins.", "Earlier start for large temperature gaps."],
     residual_heat: ["End release when all rooms are above target", "Ends the release when all rooms are above their setpoint and the total demand is below the start threshold.", null],
     use_forecast: ["Use weather forecast", "Cold forecasts release the heating limit and extend optimum start.", null],
+    opening_temperature: ["Opening temperature", "This target opens the thermostat of a co-heated room fully. HeatConductor writes the normal target back itself.", null],
+    co_heat_reserve: ["Reserve above target", "How far a room may be heated above its target during its comfort period.", "Longer burner runs and fewer own releases, but rooms are warmer than needed."],
+    co_heat_horizon: ["Horizon", "How long a co-heated room should last without demand of its own. Rooms that would need heat within this time are heated along.", "More rooms are heated along, up to the reserve."],
+    preheat_pull: ["Pull preheating forward by at most", "A room in eco is heated along when its own preheating before the comfort period would start at most this much later anyway.", "More preheating falls into running releases, but the heat has to be held longer."],
+    residual_use: ["Use residual heat after the release", "After the release rooms stay open while the pump runs on and the flow is still warm.", null],
+    residual_max: ["Residual heat at most", "Longest time for using the residual heat after a release.", "More residual heat is used, valves stay open longer."],
+    target_burner_run: ["Target burner run", "A burner run should last at least this long. This decides how many radiators have to be open.", "More rooms are heated along, fewer burner starts."],
+    default_sink: ["Open radiators without learned values", "Fully open radiators the boiler needs for the target burner run, until this is learned.", "More rooms are heated along while nothing is learned."],
+    bundle_wait: ["Bundle starts, wait at most", "If the open heating surface is too small and another room needs heat soon, the start waits this long for it. 0 turns bundling off.", "Fewer starts, but the first room waits longer for heat."],
+    co_heat_max_per_day: ["Co-heats per room and day at most", "Saves batteries and radio: every co-heat costs two commands per thermostat.", "More co-heating possible, more radio traffic."],
     solar_reference: ["PV peak power (sun proxy)", "Rooms with solar gains ignore their deficit above 40 % of this power. 0 = off.", "Sun proxy only reacts to stronger sun."],
   },
 };
@@ -344,6 +432,7 @@ const REASON_TEXT = {
     deficit_start: "Freigabe wegen Temperaturdefizit", demand_continues: "Freigabe läuft, Bedarf besteht", min_runtime: "Mindest-Freigabedauer",
     demand_satisfied: "Bedarf gedeckt", residual_heat: "Alle Räume über Soll",
     burner_finishing: "Brennerlauf wird zu Ende geführt", burner_cycle_done: "Brennerlauf beendet, Bedarf gering",
+    bundling: "Start gebündelt, wartet auf weiteren Raum",
   },
   en: {
     startup: "Starting, waiting for data", automation_disabled: "Automation disabled", manual_override: "Switched manually",
@@ -354,6 +443,7 @@ const REASON_TEXT = {
     deficit_start: "Released on temperature deficit", demand_continues: "Release running, demand continues", min_runtime: "Minimum release time",
     demand_satisfied: "Demand satisfied", residual_heat: "All rooms above target",
     burner_finishing: "Letting the burner cycle finish", burner_cycle_done: "Burner cycle done, demand low",
+    bundling: "Start bundled, waiting for another room",
   },
 };
 
@@ -960,6 +1050,18 @@ class HeatConductorPanel extends HTMLElement {
       if (!r.usage_entities || r.usage_enabled === false || r.in_use === null || r.in_use === undefined) return "<td>–</td>";
       return `<td>${r.in_use ? this.t("used") : this.t("unused")}</td>`;
     };
+    const net = s.network;
+    const plans = new Map((net ? net.rooms : []).map((p) => [p.room_id, p]));
+    const coHeatCell = (r) => {
+      if (!net) return "";
+      const plan = plans.get(r.room_id);
+      if (!plan) return "<td>–</td>";
+      if (r.co_heat_enabled === false) return `<td class="muted">${this.t("coHeatOff")}</td>`;
+      const need = plan.need_in === null ? "" : `<div class="muted">${this.t("needIn")} ${plan.need_in === 0 ? this.t("needNow") : this._duration(plan.need_in)}</div>`;
+      if (!plan.active) return `<td>–${need}</td>`;
+      const preview = net.executing ? "" : ` (${this.t("coHeatPreview")})`;
+      return `<td><b>${this.t("coHeatUntil")} ${fmt(plan.goal, 1, "°C")}</b>${esc(preview)}<div class="muted">${esc(this.t("coHeatReasons")[plan.reason] || plan.reason)}</div>${need}</td>`;
+    };
     const rows = s.rooms.map((r) => `
       <tr class="${r.status}">
         <td>${esc(r.name)}</td>
@@ -971,6 +1073,7 @@ class HeatConductorPanel extends HTMLElement {
         <td><div class="mini"><div style="width:${Math.min(100, (r.demand ?? 0) * 100)}%"></div></div>${r.demand === null ? "–" : fmt(r.demand * 100, 0, "%")}</td>
         <td>${fmt(r.weight, 1)}</td>
         ${usageCell(r)}
+        ${coHeatCell(r)}
         <td>${esc(ROOM_STATUS_TEXT[lang][r.status] || r.status || "–")}</td>
       </tr>`).join("");
 
@@ -989,14 +1092,42 @@ class HeatConductorPanel extends HTMLElement {
           <div class="facts">${facts}</div>
         </div>
       </div>
+      ${this._renderNetwork(s)}
       <div class="card">
         <h2>${this.t("rooms")}</h2>
         <div class="scroll"><table>
-          <thead><tr><th>${this.t("room")}</th><th>${this.t("temp")}</th><th>${this.t("target")}</th><th>${this.t("source")}</th><th>${this.t("valve")}</th><th>${this.t("deficit")}</th><th>${this.t("demand")}</th><th>${this.t("weight")}</th>${showUsage ? `<th>${this.t("inUse")}</th>` : ""}<th>${this.t("status")}</th></tr></thead>
+          <thead><tr><th>${this.t("room")}</th><th>${this.t("temp")}</th><th>${this.t("target")}</th><th>${this.t("source")}</th><th>${this.t("valve")}</th><th>${this.t("deficit")}</th><th>${this.t("demand")}</th><th>${this.t("weight")}</th>${showUsage ? `<th>${this.t("inUse")}</th>` : ""}${net ? `<th>${this.t("coHeat")}</th>` : ""}<th>${this.t("status")}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table></div>
       </div>
       ${this._renderHistory()}`;
+  }
+
+  _duration(minutes) {
+    if (minutes === null || minutes === undefined) return "–";
+    if (minutes < 60) return `${Math.round(minutes)} min`;
+    const h = Math.floor(minutes / 60);
+    const m = Math.round(minutes % 60);
+    return m ? `${h} h ${m} min` : `${h} h`;
+  }
+
+  _renderNetwork(s) {
+    const net = s.network;
+    if (!net) return "";
+    const names = new Map(s.rooms.map((r) => [r.room_id, r.name]));
+    const name = (id) => names.get(id) || id;
+    const active = net.rooms.filter((p) => p.active).map((p) => `${name(p.room_id)} (${this.t("coHeatUntil")} ${fmt(p.goal, 1, "°C")})`);
+    const status = net.executing ? this.t("networkStates").active : this.t("networkStates")[net.blocked] || net.blocked;
+    const nextAt = net.next_need_at ? new Date(net.next_need_at) : null;
+    const facts = [
+      [this.t("networkState"), status],
+      [this.t("networkPhase"), this.t("phases")[net.phase] || net.phase],
+      [this.t("heatingSurface"), `${fmt(net.sink, 1)} / ${this.t("heatingSurfaceNeeded")} ${fmt(net.sink_needed, 1)} ${this.t("radiatorsUnit")} (${net.sink_learned ? this.t("learnedTag") : this.t("startValue")})`],
+      [net.executing ? this.t("coHeatedNow") : this.t("wouldCoHeat"), active.length ? active.join(", ") : this.t("none")],
+      [this.t("nextNeed"), nextAt ? `${name(net.next_need_room)} · ${nextAt.toLocaleTimeString(this.lang, { hour: "2-digit", minute: "2-digit" })}` : "–"],
+      ...(net.bundle_room ? [[this.t("bundling"), name(net.bundle_room)]] : []),
+    ].map(([k, v]) => `<div class="fact"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
+    return `<div class="card"><h2>${this.t("network")}</h2><p class="hint">${esc(this.t("networkIntro"))}</p><div class="facts">${facts}</div></div>`;
   }
 
   _boilerWarnings(s) {
@@ -1169,8 +1300,9 @@ class HeatConductorPanel extends HTMLElement {
         <table><tbody>
           ${statRow(this.t("coolingTau"), room.cooling_tau, "h", 1)}
           ${statRow(this.t("deadTime"), room.dead_time, "min", 0)}
+          ${room.overshoot ? statRow(this.t("overshoot"), room.overshoot, "K", 2) : ""}
         </tbody></table>
-        <p class="hint">${this.t("usedCool")} ${this.t("usedDead")}</p>
+        <p class="hint">${this.t("usedCool")} ${this.t("usedDead")} ${room.overshoot ? this.t("usedOvershoot") : ""}</p>
         <div class="grid2">
           ${scatterChart({ points: room.heat_points, xLabel: `${this.t("outdoor")} °C`, yLabel: `${this.t("heatPoints")} (K/h)` }) || `<div class="hint">${this.t("heatPoints")}: ${this.t("notEnough")}</div>`}
           ${scatterChart({ points: room.cool_points, xLabel: "ΔT K", yLabel: `${this.t("coolPoints")} (h)` }) || `<div class="hint">${this.t("coolPoints")}: ${this.t("notEnough")}</div>`}
@@ -1204,7 +1336,55 @@ class HeatConductorPanel extends HTMLElement {
         })}
         ${data.curve_advice && data.curve_advice.suggested ? `<div class="hint"><span class="legend-swatch" style="border-color:#e53935"></span>${this.t("curveLegendNow")}<span class="legend-swatch" style="border-color:#43a047;border-top-style:dashed"></span>${this.t("curveLegendSuggested")}</div>` : ""}
       </div>
-      ${this._renderCurveAdvice(data.curve_advice)}`;
+      ${this._renderCurveAdvice(data.curve_advice)}
+      ${this._renderNetworkLearning(data.network)}`;
+  }
+
+  _renderNetworkLearning(n) {
+    if (!n) return "";
+    const sink = n.sink;
+    const facts = [
+      [this.t("sinkNeeded").replace("{minutes}", fmt(sink.target_run, 0)), `${fmt(sink.needed, 1)} ${this.t("radiatorsUnit")} (${sink.learned ? this.t("learnedTag") : this.t("startValue")})`],
+      [this.t("sinkContinuous"), sink.continuous === null ? "–" : `${fmt(sink.continuous, 1)} ${this.t("radiatorsUnit")}`],
+      [this.t("samples"), String(sink.samples)],
+    ].map(([k, v]) => `<div class="fact"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
+    const chart = scatterChart({ points: sink.points, xLabel: this.t("radiatorsUnit"), yLabel: this.t("sinkPoints") }) || `<p class="hint">${this.t("notEnough")}</p>`;
+    const days = [...(n.kpi.days || []).slice(-14), ...(n.kpi.today ? [{ ...n.kpi.today, today: true }] : [])];
+    const meanRun = (d) => (d.burner_starts ? d.burner_minutes / d.burner_starts : null);
+    const perDegree = (d) => (d.gas_kwh !== null && d.degree_days ? d.gas_kwh / d.degree_days : null);
+    const rows = days.map((d) => `<tr>
+        <td>${d.today ? this.t("kpiToday") : esc(new Date(d.day).toLocaleDateString(this.lang, { weekday: "short", day: "numeric", month: "numeric" }))}</td>
+        <td>${d.network ? "✓" : "–"}</td>
+        <td>${d.releases}</td>
+        <td>${d.burner_starts}</td>
+        <td>${fmt(meanRun(d), 1, "min")}</td>
+        <td>${d.short_runs}</td>
+        <td>${d.co_heats}</td>
+        <td>${fmt(d.gas_kwh, 1, "kWh")}</td>
+        <td>${fmt(perDegree(d), 2, "kWh")}</td>
+      </tr>`).join("");
+    const finished = (n.kpi.days || []);
+    const avg = (list, fn) => {
+      const values = list.map(fn).filter((v) => v !== null && Number.isFinite(v));
+      return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+    };
+    const summary = [true, false].map((flag) => {
+      const list = finished.filter((d) => d.network === flag);
+      if (!list.length) return "";
+      return `<tr class="muted"><td>${this.t("kpiAverage")} ${flag ? this.t("kpiWith") : this.t("kpiWithout")} (${list.length})</td><td></td>
+        <td>${fmt(avg(list, (d) => d.releases), 1)}</td>
+        <td>${fmt(avg(list, (d) => d.burner_starts), 1)}</td>
+        <td>${fmt(avg(list, meanRun), 1, "min")}</td>
+        <td>${fmt(avg(list, (d) => d.short_runs), 1)}</td>
+        <td>${fmt(avg(list, (d) => d.co_heats), 1)}</td>
+        <td>${fmt(avg(list, (d) => d.gas_kwh), 1, "kWh")}</td>
+        <td>${fmt(avg(list, perDegree), 2, "kWh")}</td></tr>`;
+    }).join("");
+    const table = rows
+      ? `<div class="scroll"><table><thead><tr><th>${this.t("kpiDay")}</th><th>${this.t("kpiNetwork")}</th><th>${this.t("kpiReleases")}</th><th>${this.t("kpiStarts")}</th><th>${this.t("kpiMeanRun")}</th><th>${this.t("kpiShort")}</th><th>${this.t("kpiCoHeats")}</th><th>${this.t("kpiGas")}</th><th>${this.t("kpiPerDegreeDay")}</th></tr></thead><tbody>${rows}${summary}</tbody></table></div>`
+      : `<p class="hint">${this.t("notEnough")}</p>`;
+    return `<div class="card"><h2>${this.t("sinkTitle")}</h2><p class="hint">${esc(this.t("sinkIntro"))}</p><div class="facts">${facts}</div>${chart}</div>
+      <div class="card"><h2>${this.t("kpiTitle")}</h2>${table}</div>`;
   }
 
   _renderSchedule() {
@@ -1432,6 +1612,7 @@ const STYLE = `
   .legend.unit { color: var(--secondary-text-color); }
   .range { display:flex; gap: 6px; align-items:center; margin: 8px 0; flex-wrap:wrap; }
   .hint { color: var(--secondary-text-color); font-size: 13px; }
+  .muted { color: var(--secondary-text-color); font-size: 12px; font-weight: normal; }
   .fit.suggestion { stroke: #43a047; stroke-dasharray: 6 4; }
   .legend-swatch { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin: 0 4px 0 10px; }
   .hint.warn { color: var(--error-color, #db4437); font-weight: 500; margin-top: 4px; }

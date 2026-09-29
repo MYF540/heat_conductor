@@ -200,6 +200,31 @@ LEARNING_DEFAULTS: Final[dict[str, float | bool]] = {
     CONF_WAKE_PREHEAT: True,  # warm up before the night window ends
 }
 
+# Heat network (stored in options)
+CONF_OPENING_TEMPERATURE: Final = "opening_temperature"
+CONF_CO_HEAT_RESERVE: Final = "co_heat_reserve"
+CONF_CO_HEAT_HORIZON: Final = "co_heat_horizon"
+CONF_PREHEAT_PULL: Final = "preheat_pull"
+CONF_RESIDUAL_USE: Final = "residual_use"
+CONF_RESIDUAL_MAX: Final = "residual_max"
+CONF_TARGET_BURNER_RUN: Final = "target_burner_run"
+CONF_DEFAULT_SINK: Final = "default_sink"
+CONF_BUNDLE_WAIT: Final = "bundle_wait"
+CONF_CO_HEAT_MAX_PER_DAY: Final = "co_heat_max_per_day"
+
+NETWORK_DEFAULTS: Final[dict[str, float | bool]] = {
+    CONF_OPENING_TEMPERATURE: 25.0,  # °C written to open a thermostat fully
+    CONF_CO_HEAT_RESERVE: 1.0,  # K a comfort room may get above its target
+    CONF_CO_HEAT_HORIZON: 180,  # min a co-heated room should last without demand
+    CONF_PREHEAT_PULL: 60,  # min a preheat may be pulled forward
+    CONF_RESIDUAL_USE: True,  # move the heat left in boiler and pipes into the rooms
+    CONF_RESIDUAL_MAX: 15,  # min
+    CONF_TARGET_BURNER_RUN: 10,  # min a burner run should last at least
+    CONF_DEFAULT_SINK: 4.0,  # fully open radiators the boiler needs, until learned
+    CONF_BUNDLE_WAIT: 30,  # min a start may wait for another room, 0 = off
+    CONF_CO_HEAT_MAX_PER_DAY: 6,  # co-heats per room and day
+}
+
 ALL_DEFAULTS: Final[dict[str, float | bool]] = {
     **PARAMETER_DEFAULTS,
     **ENERGY_DEFAULTS,
@@ -208,4 +233,5 @@ ALL_DEFAULTS: Final[dict[str, float | bool]] = {
     **VACATION_DEFAULTS,
     **SLEEP_DEFAULTS,
     **LEARNING_DEFAULTS,
+    **NETWORK_DEFAULTS,
 }

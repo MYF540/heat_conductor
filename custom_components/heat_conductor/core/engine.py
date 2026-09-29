@@ -6,7 +6,7 @@ setpoints -> room demand -> outdoor/forecast -> boiler -> energy -> learning -> 
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from typing import Any
 
 from .boiler_fsm import BoilerController, BoilerDecision, BoilerInputs
@@ -15,18 +15,31 @@ from .demand import DemandSummary, RoomDemand, RoomInput, evaluate_room, summari
 from .diagnosis import BoilerDiagnosis, DiagnosisTracker
 from .energy import EnergyParams, EnergySnapshot, EnergyTracker
 from .learning import Learner
-from .models import ControlParams, OperatingMode, Reading, RoomKind, RoomStatus
+from .models import ControlParams, OperatingMode, Reading, Reason, RoomKind, RoomStatus
+from .network import (
+    CoHeatEnd,
+    HeatNetwork,
+    NetworkInputs,
+    NetworkParams,
+    NetworkRoom,
+    NetworkState,
+    bundle_room,
+    forecast_room,
+)
 from .outdoor import ExponentialSmoother, OutdoorResult, fuse_outdoor
 from .setpoint import (
+    COMFORT_PERIOD_SOURCES,
     RoomRuntime,
     RoomSetpoint,
     SetpointContext,
     SetpointParams,
+    SetpointSource,
     TrvCommand,
     TrvInput,
     TrvState,
     compute_setpoint,
     plan_trv,
+    preheat_lead,
 )
 from .sleep import SleepParams, SleepState, SleepTracker
 from .stats import DailyRuntime, RuntimeSnapshot
@@ -43,6 +56,7 @@ class RoomControlInput:
     room_id: str
     schedule_on: bool | None = None
     next_schedule_on: datetime | None = None
+    schedule_ends: datetime | None = None  # end of the running comfort period
     trvs: tuple[TrvInput, ...] = ()
     compensation: bool = True
     solar_gain: bool = False
@@ -69,6 +83,7 @@ class EngineSnapshot:
     actuator_active: bool
     room_control_enabled: bool = False
     learned_schedule_enabled: bool = False
+    network_enabled: bool = False
     vacation_active: bool = False
     present: bool | None = None
     room_controls: tuple[RoomControlInput, ...] = ()
@@ -116,6 +131,7 @@ class EngineResult:
     forecast_12h: float | None = None
     manual_overrides: tuple[str, ...] = field(default=())
     diagnosis: BoilerDiagnosis = field(default_factory=BoilerDiagnosis)
+    network: NetworkState = field(default_factory=NetworkState)
 
     def room(self, room_id: str) -> RoomDemand | None:
         """Return the evaluated room with the given id."""
@@ -137,8 +153,11 @@ class HeatingEngine:
         solar_reference: float = 0.0,
         vacation_params: VacationParams | None = None,
         sleep_params: SleepParams | None = None,
+        network_params: NetworkParams | None = None,
     ) -> None:
         self.params = params
+        self.network_params = network_params or NetworkParams()
+        self.network = HeatNetwork()
         self.setpoint_params = setpoint_params or SetpointParams()
         self.solar_reference = solar_reference
         self.vacation_params = vacation_params or VacationParams()
@@ -164,6 +183,7 @@ class HeatingEngine:
         solar_reference: float,
         vacation_params: VacationParams | None = None,
         sleep_params: SleepParams | None = None,
+        network_params: NetworkParams | None = None,
     ) -> None:
         """Apply changed parameters without losing state."""
         self.params = params
@@ -178,6 +198,8 @@ class HeatingEngine:
             self.vacation_params = vacation_params
         if sleep_params is not None:
             self.sleep_params = sleep_params
+        if network_params is not None:
+            self.network_params = network_params
 
     def runtime(self, room_id: str) -> RoomRuntime:
         """Settings and runtime state of a room (created with defaults)."""
@@ -265,7 +287,10 @@ class HeatingEngine:
 
         controls = {c.room_id: c for c in snap.room_controls}
         room_control_active = snap.room_control_enabled and snap.automation_enabled
+        night_next = self._next_night(now) if not sleep.sleeping else None
+        masked = self.network.masked_rooms(now)
         setpoints: list[RoomSetpoint] = []
+        periods: dict[str, tuple[datetime | None, datetime | None, timedelta]] = {}
         room_inputs: list[RoomInput] = []
         for room in snap.rooms:
             control = controls.get(room.room_id)
@@ -275,31 +300,33 @@ class HeatingEngine:
                 runtime = self.runtime(room.room_id)
                 learner = self.learner.room(room.room_id)
                 schedule_on, next_schedule_on = control.schedule_on, control.next_schedule_on
-                setpoint = compute_setpoint(
-                    room.room_id,
-                    runtime,
-                    SetpointContext(
-                        now=now,
-                        mode=snap.mode,
-                        vacation_active=vacation,
-                        present=snap.present,
-                        schedule_on=schedule_on,
-                        next_schedule_on=next_schedule_on,
-                        window_open=any(room.windows_open),
-                        room_temperature=_room_temperature(room, now, p.stale_after),
-                        heat_rate=learner.heat_rate_for(outdoor.value),
-                        dead_time=learner.dead_time_value(),
-                        forecast_drop=forecast_drop,
-                        activity=control.activity,
-                        sleeping=sleep.sleeping,
-                        wake_at=sleep.ends_at,
-                        predictive=predictive,
-                        arrival_now=arrival_now,
-                        arrival_next=arrival_next,
-                    ),
-                    sp,
+                ctx = SetpointContext(
+                    now=now,
+                    mode=snap.mode,
+                    vacation_active=vacation,
+                    present=snap.present,
+                    schedule_on=schedule_on,
+                    next_schedule_on=next_schedule_on,
+                    window_open=any(room.windows_open),
+                    room_temperature=_room_temperature(room, now, p.stale_after),
+                    heat_rate=learner.heat_rate_for(outdoor.value),
+                    dead_time=learner.dead_time_value(),
+                    forecast_drop=forecast_drop,
+                    activity=control.activity,
+                    sleeping=sleep.sleeping,
+                    wake_at=sleep.ends_at,
+                    predictive=predictive,
+                    arrival_now=arrival_now,
+                    arrival_next=arrival_next,
                 )
+                setpoint = compute_setpoint(room.room_id, runtime, ctx, sp)
                 setpoints.append(setpoint)
+                periods[room.room_id] = (
+                    *_comfort_period(
+                        setpoint, control, now, predictive, arrival_next, sleep.ends_at, night_next
+                    ),
+                    preheat_lead(runtime, ctx, sp),
+                )
                 if room_control_active:
                     effective = setpoint.target
                 solar_active = (
@@ -307,10 +334,44 @@ class HeatingEngine:
                     and solar_ratio is not None
                     and solar_ratio >= SOLAR_ACTIVE_RATIO
                 )
-            room_inputs.append(replace(room, effective_target=effective, solar_active=solar_active))
+            room_inputs.append(
+                replace(
+                    room,
+                    effective_target=effective,
+                    solar_active=solar_active,
+                    ignore_valve=room.room_id in masked,
+                )
+            )
 
         rooms = tuple(evaluate_room(room, now, p) for room in room_inputs)
         demand = summarize(rooms)
+        by_id = {r.room_id: r for r in room_inputs}
+
+        # Heat network: forecast every room, then decide whether a start should wait.
+        np_ = self.network_params
+        network_rooms = self._network_rooms(setpoints, rooms, by_id, controls, periods)
+        forecasts = {r.room_id: forecast_room(r, now, outdoor.value, np_) for r in network_rooms}
+        sink = _open_heating_surface(rooms, by_id)
+        sink_needed, sink_learned = self.learner.sink.needed(np_.target_run, np_.default_sink)
+        if not snap.network_enabled:
+            blocked: str | None = "switch_off"
+        elif not room_control_active:
+            blocked = "room_control_off"
+        elif not snap.actuator_active:
+            blocked = "observation_mode"
+        else:
+            blocked = None
+        waiting_for = (
+            bundle_room(
+                forecasts,
+                sink=sink,
+                sink_needed=sink_needed,
+                co_heating=blocked is None,
+                params=np_,
+            )
+            if snap.network_enabled
+            else None
+        )
 
         flow = (
             snap.flow_temperature.valid_value(now, p.stale_after) if snap.flow_temperature else None
@@ -346,6 +407,7 @@ class HeatingEngine:
                 relay_on=snap.relay_on,
                 forecast_outdoor=snap.forecast_12h,
                 burner_on=burner,
+                bundle_wait=np_.bundle_wait if waiting_for is not None else None,
             )
         )
         boiler_flow = (
@@ -377,6 +439,48 @@ class HeatingEngine:
             if snap.flow_setpoint
             else None,
         )
+
+        network = self.network.step(
+            NetworkInputs(
+                now=now,
+                rooms=network_rooms,
+                forecasts=forecasts,
+                release=decision.request_heat,
+                enabled=snap.network_enabled,
+                blocked=blocked,
+                duty_cycle=snap.duty_cycle.valid_value(now, p.stale_after)
+                if snap.duty_cycle
+                else None,
+                duty_cycle_limit=sp.duty_cycle_limit,
+                pump_on=snap.pump_on,
+                flow=boiler_flow if boiler_flow is not None else flow,
+                boiler_not_heating=diagnosis.not_heating,
+                sink=sink,
+                sink_needed=sink_needed,
+                sink_learned=sink_learned,
+                bundle_room=waiting_for if decision.reason is Reason.BUNDLING else None,
+            ),
+            np_,
+        )
+        # The relay as it really is: only a real release teaches the heat sink.
+        real_release = (
+            snap.relay_on
+            if snap.relay_on is not None
+            else (decision.request_heat if snap.actuator_active else None)
+        )
+        self.learner.sink.update(now, burner=burner, release=real_release, sink=sink)
+        self.network.kpi.update(
+            now,
+            burner=burner,
+            release=real_release,
+            co_heats=network.started if network.executing else 0,
+            enabled=snap.network_enabled,
+            energy=energy,
+        )
+        room_temps = {r.room_id: r.temperature for r in rooms}
+        for room_id, end in network.ended:
+            if end is CoHeatEnd.REACHED and network.executing:
+                self.learner.room(room_id).start_overshoot(now, room_temps.get(room_id))
 
         # Learning needs real heat: the burner, or the relay when HeatConductor controls it.
         heating = (
@@ -416,6 +520,7 @@ class HeatingEngine:
                 and room.target is not None
                 and room.valve is not None
                 and room.room_id in curve_rooms
+                and room.room_id not in masked
             ],
         )
         self.learner.curve.update(
@@ -428,8 +533,9 @@ class HeatingEngine:
         duty_cycle_ok = duty is None or duty <= sp.duty_cycle_limit
         commands: list[TrvCommand] = []
         manual: list[str] = []
+        co_heated = network.active_rooms() if network.executing else frozenset()
+        settling = self.network.masked_rooms(now)
         if room_control_active:
-            by_id = {r.room_id: r for r in room_inputs}
             for setpoint in setpoints:
                 control = controls[setpoint.room_id]
                 runtime = self.runtime(setpoint.room_id)
@@ -439,25 +545,51 @@ class HeatingEngine:
                     if room_input.room_temperature
                     else None
                 )
+                co_heat = setpoint.room_id in co_heated
+                toggled = co_heat != runtime.co_heat_written
                 for trv in control.trvs:
                     state = runtime.trvs.setdefault(trv.entity_id, TrvState())
+                    if toggled:
+                        state.restore_target = trv.current_target if co_heat else None
                     command, manual_temp = plan_trv(
                         state,
                         trv,
-                        target=setpoint.target,
-                        target_changed=setpoint.changed,
+                        target=np_.opening_temperature if co_heat else setpoint.target,
+                        target_changed=setpoint.changed or toggled,
                         source=setpoint.source,
                         room_temperature=external,
                         compensation=control.compensation,
                         now=now,
                         params=sp,
                         duty_cycle_ok=duty_cycle_ok,
+                        learn_offset=setpoint.room_id not in settling,
                     )
                     if manual_temp is not None:
                         self.set_override(setpoint.room_id, now, manual_temp)
                         manual.append(setpoint.room_id)
                     if command is not None:
                         commands.append(command)
+                if duty_cycle_ok:
+                    runtime.co_heat_written = co_heat
+        elif duty_cycle_ok:
+            # Without room control the thermostats get back what they had before.
+            for setpoint in setpoints:
+                runtime = self.runtime(setpoint.room_id)
+                if not runtime.co_heat_written:
+                    continue
+                for trv in controls[setpoint.room_id].trvs:
+                    state = runtime.trvs.setdefault(trv.entity_id, TrvState())
+                    restore = (
+                        state.restore_target
+                        if state.restore_target is not None
+                        else setpoint.target
+                    )
+                    if trv.available:
+                        commands.append(TrvCommand(trv.entity_id, restore, False))
+                    state.restore_target = None
+                    state.last_written = restore
+                    state.last_write_at = now
+                runtime.co_heat_written = False
 
         return EngineResult(
             rooms=rooms,
@@ -489,7 +621,69 @@ class HeatingEngine:
             forecast_12h=snap.forecast_12h,
             manual_overrides=tuple(manual),
             diagnosis=diagnosis,
+            network=network,
         )
+
+    # -- heat network ---------------------------------------------------------
+
+    def _next_night(self, now: datetime) -> datetime | None:
+        """Start of the next night, from the manual window or the learned night."""
+        params = self.sleep_params
+        if params.window_start is not None and params.window_end is not None:
+            start = datetime.combine(now.date(), time(), tzinfo=now.tzinfo) + timedelta(
+                minutes=params.window_start
+            )
+            return start if start > now else start + timedelta(days=1)
+        if params.use_learned:
+            return self.learner.night.window_starts(now)[1]
+        return None
+
+    def _network_rooms(
+        self,
+        setpoints: list[RoomSetpoint],
+        rooms: tuple[RoomDemand, ...],
+        inputs: dict[str, RoomInput],
+        controls: dict[str, RoomControlInput],
+        periods: dict[str, tuple[datetime | None, datetime | None, timedelta]],
+    ) -> tuple[NetworkRoom, ...]:
+        """What the heat network needs to know about every regulated room."""
+        demands = {r.room_id: r for r in rooms}
+        result: list[NetworkRoom] = []
+        for setpoint in setpoints:
+            room_id = setpoint.room_id
+            demand, room_input, control = demands[room_id], inputs[room_id], controls[room_id]
+            runtime = self.runtime(room_id)
+            learner = self.learner.room(room_id)
+            comfort_starts, comfort_ends, lead = periods[room_id]
+            comfort_like = setpoint.source in COMFORT_PERIOD_SOURCES
+            eligible = (
+                runtime.enabled
+                and runtime.co_heat_enabled
+                and bool(control.trvs)
+                and demand.temperature is not None
+                and demand.status in (RoomStatus.OK, RoomStatus.DEGRADED)
+                and not room_input.solar_active
+                and (comfort_like or comfort_starts is not None)
+            )
+            result.append(
+                NetworkRoom(
+                    room_id=room_id,
+                    temperature=demand.temperature,
+                    target=setpoint.target,
+                    comfort=runtime.comfort,
+                    eligible=eligible,
+                    comfort_like=comfort_like,
+                    comfort_starts=comfort_starts,
+                    comfort_ends=comfort_ends,
+                    preheat_lead=lead,
+                    radiators=max(len(room_input.valves), len(control.trvs), 1),
+                    valve=demand.valve,
+                    demanding=demand.deficit is not None and demand.deficit > 0,
+                    tau=learner.cooling_tau_value(),
+                    overshoot=learner.overshoot_value(),
+                )
+            )
+        return tuple(result)
 
     # -- persistence --------------------------------------------------------
 
@@ -511,6 +705,7 @@ class HeatingEngine:
             "auto_vacation": self.auto_vacation.to_dict(),
             "diagnosis": self.diagnosis.to_dict(),
             "sleep": self.sleep.to_dict(),
+            "network": self.network.to_dict(),
         }
 
     def restore(self, data: dict[str, Any]) -> None:
@@ -535,6 +730,50 @@ class HeatingEngine:
         self.auto_vacation = AutoVacation.from_dict(data.get("auto_vacation"))
         self.diagnosis.restore(data.get("diagnosis"))
         self.sleep.restore(data.get("sleep"))
+        self.network.restore(data.get("network"))
+
+
+def _comfort_period(
+    setpoint: RoomSetpoint,
+    control: RoomControlInput,
+    now: datetime,
+    predictive: bool,
+    arrival_next: datetime | None,
+    wake_at: datetime | None,
+    night_next: datetime | None,
+) -> tuple[datetime | None, datetime | None]:
+    """(when comfort begins for an eco room, when it ends for a comfort room)."""
+    source = setpoint.source
+    if source in COMFORT_PERIOD_SOURCES:
+        ends = [
+            t
+            for t in (control.schedule_ends if control.schedule_on else None, night_next)
+            if t is not None and t > now
+        ]
+        return None, min(ends) if ends else None
+    if setpoint.room_active is False:
+        return None, None  # an unused room would stay in eco anyway
+    if source is SetpointSource.SCHEDULE_ECO:
+        starts = control.next_schedule_on
+    elif source is SetpointSource.ABSENT and predictive:
+        starts = arrival_next
+    elif source is SetpointSource.SLEEP:
+        starts = wake_at
+    else:
+        starts = None
+    return (starts if starts is not None and starts > now else None), None
+
+
+def _open_heating_surface(
+    rooms: tuple[RoomDemand, ...], inputs: dict[str, RoomInput]
+) -> float | None:
+    """Open valves in fully open radiators (a room's mean times its valve count)."""
+    values = [
+        room.valve * max(len(inputs[room.room_id].valves), 1)
+        for room in rooms
+        if room.valve is not None
+    ]
+    return sum(values) if values else None
 
 
 def _room_temperature(room: RoomInput, now: datetime, max_age: timedelta) -> float | None:

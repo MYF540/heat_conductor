@@ -51,6 +51,11 @@ SWITCHES: tuple[HeatConductorSwitchDescription, ...] = (
         value_fn=lambda s: s.learned_schedule_enabled,
         set_fn=lambda c, v: c.async_set_learned_schedule(v),
     ),
+    HeatConductorSwitchDescription(
+        key="heat_network",
+        value_fn=lambda s: s.network_enabled,
+        set_fn=lambda c, v: c.async_set_network(v),
+    ),
 )
 
 
@@ -63,10 +68,15 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     async_add_entities(SettingsSwitch(coordinator, d) for d in SWITCHES)
     for room in coordinator.rooms:
-        if room.kind is RoomKind.REGULATED and room.usage_entities:
-            async_add_entities(
-                [RoomUsageSwitch(coordinator, room)], config_subentry_id=room.room_id
-            )
+        if room.kind is not RoomKind.REGULATED:
+            continue
+        entities: list[SwitchEntity] = []
+        if room.usage_entities:
+            entities.append(RoomUsageSwitch(coordinator, room))
+        if room.climates:
+            entities.append(RoomCoHeatSwitch(coordinator, room))
+        if entities:
+            async_add_entities(entities, config_subentry_id=room.room_id)
 
 
 class SettingsSwitch(HeatConductorEntity, SwitchEntity):
@@ -92,6 +102,28 @@ class SettingsSwitch(HeatConductorEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Disable the setting."""
         await self.entity_description.set_fn(self.coordinator, False)
+
+
+class RoomCoHeatSwitch(RoomEntity, SwitchEntity):
+    """Whether the heat network may heat this room along."""
+
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, coordinator: HeatConductorCoordinator, room: RoomConfig) -> None:
+        super().__init__(coordinator, room, "co_heating")
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether co-heating is allowed."""
+        return self.coordinator.engine.runtime(self.room.room_id).co_heat_enabled
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Allow co-heating."""
+        await self.coordinator.async_set_room_co_heat(self.room.room_id, True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Never co-heat this room."""
+        await self.coordinator.async_set_room_co_heat(self.room.room_id, False)
 
 
 class RoomUsageSwitch(RoomEntity, SwitchEntity):

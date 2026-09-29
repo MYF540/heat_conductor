@@ -45,6 +45,7 @@ from .inputs import ControlState, EntityConfig, InputReader, RoomConfig, build_s
 from .params import (
     control_params,
     energy_params,
+    network_params,
     setpoint_params,
     sleep_params,
     solar_reference,
@@ -67,6 +68,7 @@ class Settings:
     observation_mode: bool = True
     room_control_enabled: bool = False
     learned_schedule_enabled: bool = False
+    network_enabled: bool = False
     vacation_start: datetime | None = None
     vacation_end: datetime | None = None
     vacation_temp: float | None = None
@@ -85,6 +87,7 @@ class Settings:
             "observation_mode": self.observation_mode,
             "room_control_enabled": self.room_control_enabled,
             "learned_schedule_enabled": self.learned_schedule_enabled,
+            "network_enabled": self.network_enabled,
             "vacation_start": _iso(self.vacation_start),
             "vacation_end": _iso(self.vacation_end),
             "vacation_temp": self.vacation_temp,
@@ -100,6 +103,7 @@ class Settings:
         self.observation_mode = bool(data.get("observation_mode", True))
         self.room_control_enabled = bool(data.get("room_control_enabled", False))
         self.learned_schedule_enabled = bool(data.get("learned_schedule_enabled", False))
+        self.network_enabled = bool(data.get("network_enabled", False))
         self.vacation_start = _parse(data.get("vacation_start"))
         self.vacation_end = _parse(data.get("vacation_end"))
         temp = data.get("vacation_temp")
@@ -131,6 +135,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
             solar_reference(self._options),
             vacation_params(self._options),
             sleep_params(self._options),
+            network_params(self._options),
         )
         self.settings = Settings()
         self.changelog: list[dict[str, Any]] = []
@@ -266,6 +271,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
             solar_reference(new),
             vacation_params(new),
             sleep_params(new),
+            network_params(new),
         )
         self.hass.async_create_task(self.async_request_refresh())
         return True
@@ -295,6 +301,16 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
     async def async_set_learned_schedule(self, enabled: bool) -> None:
         """Let rooms without a schedule helper follow the learned presence schedule."""
         self.settings.learned_schedule_enabled = enabled
+        await self._settings_changed()
+
+    async def async_set_network(self, enabled: bool) -> None:
+        """Let releases heat other rooms along and use the residual heat."""
+        self.settings.network_enabled = enabled
+        await self._settings_changed()
+
+    async def async_set_room_co_heat(self, room_id: str, enabled: bool) -> None:
+        """Allow or forbid co-heating of one room."""
+        self.engine.runtime(room_id).co_heat_enabled = enabled
         await self._settings_changed()
 
     async def async_set_room_usage(self, room_id: str, enabled: bool) -> None:
@@ -394,6 +410,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
                 room_control_enabled=self.settings.room_control_enabled,
                 learned_schedule_enabled=self.settings.learned_schedule_enabled,
                 vacation_active=self.settings.vacation_active(now),
+                network_enabled=self.settings.network_enabled,
                 forecast_6h=self.forecast_6h,
                 forecast_12h=self.forecast_12h,
             )

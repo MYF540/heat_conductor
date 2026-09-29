@@ -57,6 +57,8 @@ AUTO_COMFORT_SOURCES = frozenset(
     }
 )
 AUTO_ECO_SOURCES = frozenset({SetpointSource.ECO, SetpointSource.SCHEDULE_ECO})
+# Comfort periods the heat network may add a reserve to.
+COMFORT_PERIOD_SOURCES = AUTO_COMFORT_SOURCES | {SetpointSource.USAGE_ACTIVE}
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,6 +97,8 @@ class TrvState:
     last_write_at: datetime | None = None
     offset: float | None = None
     offset_at: datetime | None = None
+    # Target the thermostat had before co-heating opened it (restored without room control).
+    restore_target: float | None = None
 
 
 @dataclass(slots=True)
@@ -105,6 +109,9 @@ class RoomRuntime:
     eco: float
     enabled: bool = True
     usage_enabled: bool = True
+    co_heat_enabled: bool = True
+    # The thermostats hold the opening temperature of the heat network.
+    co_heat_written: bool = False
     last_active_at: datetime | None = None
     override_temp: float | None = None
     override_until: datetime | None = None
@@ -122,6 +129,8 @@ class RoomRuntime:
             "eco": self.eco,
             "enabled": self.enabled,
             "usage_enabled": self.usage_enabled,
+            "co_heat_enabled": self.co_heat_enabled,
+            "co_heat_written": self.co_heat_written,
             "last_active_at": _iso(self.last_active_at),
             "override_temp": self.override_temp,
             "override_until": _iso(self.override_until),
@@ -133,6 +142,7 @@ class RoomRuntime:
                     "last_write_at": _iso(s.last_write_at),
                     "offset": s.offset,
                     "offset_at": _iso(s.offset_at),
+                    "restore_target": s.restore_target,
                 }
                 for entity_id, s in self.trvs.items()
             },
@@ -146,6 +156,8 @@ class RoomRuntime:
             eco=_float(data.get("eco"), params.default_eco),
             enabled=bool(data.get("enabled", True)),
             usage_enabled=bool(data.get("usage_enabled", True)),
+            co_heat_enabled=bool(data.get("co_heat_enabled", True)),
+            co_heat_written=bool(data.get("co_heat_written", False)),
             last_active_at=_parse(data.get("last_active_at")),
             override_temp=_float(data.get("override_temp"), None),
             override_until=_parse(data.get("override_until")),
@@ -158,6 +170,7 @@ class RoomRuntime:
                 last_write_at=_parse(trv.get("last_write_at")),
                 offset=_float(trv.get("offset"), None),
                 offset_at=_parse(trv.get("offset_at")),
+                restore_target=_float(trv.get("restore_target"), None),
             )
         return runtime
 
@@ -397,6 +410,7 @@ def plan_trv(
     now: datetime,
     params: SetpointParams,
     duty_cycle_ok: bool,
+    learn_offset: bool = True,
 ) -> tuple[TrvCommand | None, float | None]:
     """Decide whether to write a thermostat.
 
@@ -406,7 +420,13 @@ def plan_trv(
     if not trv.available or trv.current_target is None:
         return None, None
 
-    if compensation and room_temperature is not None and trv.current_temperature is not None:
+    # A thermostat on a radiator opened by the heat network reads far too warm.
+    if (
+        compensation
+        and learn_offset
+        and room_temperature is not None
+        and trv.current_temperature is not None
+    ):
         raw = trv.current_temperature - room_temperature
         if state.offset is None or state.offset_at is None:
             state.offset = raw

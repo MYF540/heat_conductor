@@ -381,6 +381,7 @@ hacs.json  README.md  PLAN.md  LICENSE
 | 2026-09-14 | Raumsteuerung nach Installation standardmäßig aus (eigener Schalter) |
 | 2026-09-14 | Panel als abhängigkeitsfreie Web-Component ohne Build (statt Lit/TypeScript): kein Node-Build, offline lauffähig |
 | 2026-09-14 | Was-wäre-wenn für alle Nutzer lesend erlaubt, bis 168 h; Änderungsprotokoll hält die letzten 500 Einträge |
+| 2026-09-29 | Wärmeverbund und Netzplaner (Abschnitt 13): Mitheizen über hohe Solltemperatur (nicht HmIP-Boost), Vorrat +1 K, Eco-Räume nur vor Komfortbeginn, Wintergarten ausgeschlossen, Start mit Schalter aus und Vorschau; Vorausrechnung je Raum, gelernte benötigte Heizfläche, gelerntes Nachheizen, Bündeln von Starts. Eine leichte Form der in Abschnitt 9 ausgeschlossenen MPC |
 | 2026-09-29 | Anwesenheitskonzept A „Vorausschauend heizen“ statt gelerntem Zeitplan: Vorhersage aus dem Anwesenheitsraster, Bestätigung durch echte Anwesenheit, Wartezeit, Aufwärmen vor Ende des Nachtfensters; Ankunft über Entfernung (Proximity) als spätere Ergänzung |
 | 2026-09-29 | Steuerung auf „Freigabe statt Brennerstart“ ausgerichtet: das Relais gibt den Kessel nur frei; laufende Brenner werden nicht abgeschaltet, nach einem Brennerlauf endet die Freigabe bei Bedarf unter der Start-Schwelle; Diagnose „Kessel heizt trotz Freigabe nicht“; Übersichtsgraphen mit 5-Minuten-Mittel und Tooltip |
 | 2026-09-21 | Nachtabsenkung: manuelles Nachtfenster, optionaler Schlafsensor mit Bestätigungs- und Aufwachzeit, daraus gelerntes Nachtfenster; Vorrang über Zeitplan und Nutzung, unter Modus Komfort und Boost |
@@ -512,3 +513,57 @@ Ein eigener Menüpunkt **„HeatConductor“** in der linken HA-Seitenleiste (ne
 1. Umfang Was-wäre-wenn: nur 24 h oder wählbar bis 7 Tage (Rechenzeit auf dem Thin Client prüfen).
 2. Sollen Nicht-Admins Entwürfe simulieren dürfen (ohne Speichern)?
 3. Aufbewahrungsdauer des Änderungsprotokolls.
+
+---
+
+## 13. Erweiterung: Wärmeverbund und Netzplaner
+
+> Status: freigegeben am 2026-09-29, Umsetzung als v0.12.0.
+
+### 13.1 Ziel
+
+Die Anlage arbeitet als **ein Netz**: Kessel, Rohre und alle Räume. Statt jeden Raum für sich
+heizen zu lassen, nutzt HeatConductor jede Freigabe für möglichst viele Räume. Dadurch gibt es
+weniger, längere Brennerläufe, einen kälteren Rücklauf und weniger ungenutzte Restwärme.
+
+Messgrundlage (22.–29.09, lokale Exporte):
+- 107 Brennerstarts, Median der Laufzeit 2 min, 81 % unter 3 min, fast immer mit ~3 offenen Ventilen.
+- Die zwei Läufe mit 5 offenen Ventilen dauerten je ~26 min.
+- Die Mindestleistung des Kessels (7,7 kW) liegt über dem, was wenige Heizkörper abnehmen.
+- 100 l Kesselwasser speichern bei 20 K Abkühlung ~2,3 kWh.
+
+### 13.2 Bausteine
+
+| Baustein | Verhalten |
+|---|---|
+| Mitheizen (Bedarf bald) | Während einer Freigabe werden Räume mitgeheizt, die innerhalb des Horizonts (Standard 3 h) selbst Bedarf hätten. Reihenfolge nach „Zeit bis Bedarf“ aus der gelernten Auskühlkonstante τ. Ziel: so warm, dass der Raum den Horizont übersteht, höchstens Soll + Vorrat (Standard +1 K) |
+| Mitheizen (Kessel-Abnahme) | Ist die offene Heizfläche kleiner als die gelernte benötigte Heizfläche, kommen weitere Räume bis Soll + Vorrat dazu |
+| Eco-Räume | Nur wenn ihre Komfortzeit bald beginnt (Zeitplan, erwartete Ankunft, Ende der Nacht), dann bis Komfort, nicht darüber. „Bald“ heißt: das eigene Vorheizen des Raums würde in höchstens 60 min (einstellbar) ohnehin beginnen. Früheres Aufheizen würde die Wärme nur bis zum Komfortbeginn wieder verlieren |
+| Öffnen | Thermostat auf die Öffnungstemperatur (Standard 25 °C), zurück aufs normale Soll bei Ziel minus gelerntem Nachheizen |
+| Restwärme | Nach Ende der Freigabe bleiben Räume offen, solange die Pumpe nachläuft und der Vorlauf noch ≥ 5 K über dem Raum liegt, höchstens 15 min |
+| Bündeln | Reicht die Heizfläche für einen sinnvollen Brennerlauf nicht und bekommt ein weiterer Raum bald Bedarf, wartet der Start bis zu 30 min auf ihn. Ein Raum mit Soforthilfe-Defizit startet immer sofort |
+
+### 13.3 Netzplaner
+
+- **Vorausrechnung:** Für jeden Raum wird mit dem Abkühlmodell `T(t) = T_a + (T − T_a)·e^(−t/τ)` die Zeit bis zum nächsten Bedarf berechnet (Ende der Komfortzeit und der kommende Komfortbeginn fließen ein). Das Panel zeigt den nächsten erwarteten Bedarf je Raum und für die Anlage.
+- **Benötigte Heizfläche:** Lernen aus jedem Brennerlauf innerhalb einer Freigabe (ohne den ersten Lauf nach Freigabestart): `1/Laufzeit = a − b · offene Heizfläche` (gewichtete Regression mit Vergessen). Daraus folgt die Heizfläche für die Ziel-Brennerlaufzeit (Standard 10 min). Bis genug Läufe da sind, gilt der Startwert (4 voll offene Ventile).
+- **Nachheizen je Raum:** Nach dem Schließen steigt die Raumtemperatur noch (Heizkörper-Masse). Gelernt wird der höchste Anstieg innerhalb von 60 min nach dem Ende des Mitheizens. Bis dahin gilt 0,3 K.
+
+### 13.4 Schutz
+
+- Kein Mitheizen bei offenem Fenster, Sonnengewinn, Boost, Handübernahme, Urlaub, Abwesenheit ohne erwartete Ankunft, in der Nacht (außer kurz vor dem Aufstehen) oder wenn der Kessel trotz Freigabe nicht heizt. Während der Brennersperrzeit wird dagegen gern mitgeheizt: das warme Kesselwasser wird so genutzt.
+- Mitgeheizte Räume zählen nicht zum Wärmebedarf: ihr offenes Ventil verlängert keine Freigabe.
+- Duty Cycle: nur mit 20 % Reserve unter der Grenze, höchstens 6 Vorgänge je Raum und Tag, höchstens 2 h je Vorgang.
+- Ausgeführt wird nur mit Schalter *Wärmeverbund*, aktiver Raumsteuerung und echter Freigabe (nicht im Beobachtungsmodus). Sonst zeigt das Panel nur, was passieren würde.
+- Je Raum abschaltbar (Schalter *Mitheizen*). Der Wintergarten bleibt ausgeschlossen: kaum gedämmt, per Tür abgetrennt.
+- Handänderung während des Mitheizens wird übernommen und beendet das Mitheizen.
+
+### 13.5 Messen
+
+Tageswerte: Brennerstarts, Brennerminuten, Läufe unter 3 min, Freigaben, Mitheiz-Vorgänge, Gas
+und Außentemperatur. Dazu der Vermerk, ob der Wärmeverbund an war. Das Panel vergleicht die Tage
+mit und ohne Wärmeverbund.
+
+### 13.6 Spätere Ergänzung
+
+- Ankunft über die Entfernung (Proximity).
