@@ -310,20 +310,6 @@ class HeatingEngine:
             else None
         )
 
-        decision = self.boiler.step(
-            BoilerInputs(
-                now=now,
-                demand=demand,
-                outdoor_smoothed=smoothed,
-                flow_temperature=flow,
-                mode=OperatingMode.VACATION if vacation else snap.mode,
-                automation_enabled=snap.automation_enabled,
-                actuator_active=snap.actuator_active,
-                relay_on=snap.relay_on,
-                forecast_outdoor=snap.forecast_12h,
-            )
-        )
-
         energy = self.energy.update(
             now,
             meter=snap.gas_meter,
@@ -336,6 +322,21 @@ class HeatingEngine:
         )
         burner = energy.burner_active
         has_burner_source = snap.burner_on is not None or energy.has_gas_source
+
+        decision = self.boiler.step(
+            BoilerInputs(
+                now=now,
+                demand=demand,
+                outdoor_smoothed=smoothed,
+                flow_temperature=flow,
+                mode=OperatingMode.VACATION if vacation else snap.mode,
+                automation_enabled=snap.automation_enabled,
+                actuator_active=snap.actuator_active,
+                relay_on=snap.relay_on,
+                forecast_outdoor=snap.forecast_12h,
+                burner_on=burner,
+            )
+        )
         boiler_flow = (
             snap.boiler_flow_temperature.valid_value(now, p.stale_after)
             if snap.boiler_flow_temperature
@@ -361,6 +362,9 @@ class HeatingEngine:
             pipe_return=ret,
             boiler_flow=boiler_flow,
             boiler_return=boiler_return,
+            flow_setpoint=snap.flow_setpoint.valid_value(now, p.stale_after)
+            if snap.flow_setpoint
+            else None,
         )
 
         # Learning needs real heat: the burner, or the relay when HeatConductor controls it.

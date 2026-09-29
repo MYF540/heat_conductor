@@ -62,6 +62,8 @@ class Reason(StrEnum):
     MIN_RUNTIME = "min_runtime"
     DEMAND_SATISFIED = "demand_satisfied"
     RESIDUAL_HEAT = "residual_heat"
+    BURNER_FINISHING = "burner_finishing"
+    BURNER_CYCLE_DONE = "burner_cycle_done"
 
 
 class RoomStatus(StrEnum):
@@ -119,3 +121,7 @@ class ControlParams:
     residual_heat_stop: bool = True
     residual_heat_margin: float = 0.2
     use_forecast: bool = True
+    # The relay only releases heat; the boiler decides about the burner itself.
+    finish_burner_cycle: bool = True
+    finish_timeout: timedelta = timedelta(minutes=30)
+    end_after_burner_cycle: bool = True

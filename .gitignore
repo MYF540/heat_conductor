@@ -17,3 +17,6 @@ htmlcov/
 # ESPHome
 esphome/secrets.yaml
 esphome/.esphome/
+
+# Exports from Home Assistant for analysis (personal data, never upload)
+data/

@@ -75,6 +75,9 @@ CONF_STALE_AFTER: Final = "stale_after"
 CONF_MANUAL_OVERRIDE: Final = "manual_override"
 CONF_OUTDOOR_SMOOTHING: Final = "outdoor_smoothing"
 CONF_BURNER_FLOW_THRESHOLD: Final = "burner_flow_threshold"
+CONF_FINISH_BURNER_CYCLE: Final = "finish_burner_cycle"
+CONF_FINISH_TIMEOUT: Final = "finish_timeout"
+CONF_END_AFTER_BURNER_CYCLE: Final = "end_after_burner_cycle"
 
 PARAMETER_DEFAULTS: Final[dict[str, float]] = {
     CONF_START_THRESHOLD: 25,  # %
@@ -92,6 +95,9 @@ PARAMETER_DEFAULTS: Final[dict[str, float]] = {
     CONF_MANUAL_OVERRIDE: 60,  # min
     CONF_OUTDOOR_SMOOTHING: 24,  # h
     CONF_BURNER_FLOW_THRESHOLD: 0.2,  # m³/h
+    CONF_FINISH_BURNER_CYCLE: True,  # never cut a running burner
+    CONF_FINISH_TIMEOUT: 30,  # min, longest wait for the burner cycle to end
+    CONF_END_AFTER_BURNER_CYCLE: True,  # no new burner cycle for marginal demand
 }
 
 # Energy constants (stored in options)

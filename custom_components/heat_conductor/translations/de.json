@@ -115,21 +115,27 @@
           "stop_threshold": "Stopp-Schwelle (Gesamtbedarf)",
           "immediate_start_deficit": "Sofortstart ab Raumdefizit",
           "deficit_full_scale": "Defizit für 100 % Raumbedarf",
-          "min_run": "Mindestlaufzeit Brenner",
-          "min_pause": "Mindestpause",
-          "max_starts_per_hour": "Maximale Starts pro Stunde",
+          "min_run": "Mindest-Freigabedauer",
+          "min_pause": "Mindestpause zwischen Freigaben",
+          "max_starts_per_hour": "Maximale Freigaben pro Stunde",
           "heating_limit": "Heizgrenze (geglättete Außentemperatur)",
           "frost_limit": "Frostschutz-Raumtemperatur",
           "max_flow_temperature": "Maximale Vorlauftemperatur",
           "stale_after": "Werte gelten als veraltet nach",
           "manual_override": "Pause nach manuellem Schalten",
           "outdoor_smoothing": "Glättung der Außentemperatur",
-          "burner_flow_threshold": "Gasdurchfluss ab dem der Brenner als an gilt"
+          "burner_flow_threshold": "Gasdurchfluss ab dem der Brenner als an gilt",
+          "finish_burner_cycle": "Laufenden Brenner nicht abschalten",
+          "finish_timeout": "Höchstens so lange auf das Brennerende warten",
+          "end_after_burner_cycle": "Nach dem Brennerlauf bei geringem Bedarf beenden"
         },
         "data_description": {
           "start_threshold": "Der Kessel startet, wenn der gewichtete Bedarf aller Räume für die Bestätigungszeit über diesem Wert liegt.",
           "immediate_start_deficit": "Liegt ein Raum so weit unter seinem Sollwert, startet der Kessel ohne Bestätigungszeit.",
-          "heating_limit": "Über dieser geglätteten Außentemperatur bleibt der Kessel aus (außer im Komfort-Modus und bei Frostschutz)."
+          "heating_limit": "Über dieser geglätteten Außentemperatur bleibt der Kessel aus (außer im Komfort-Modus und bei Frostschutz).",
+          "min_run": "Das Relais gibt den Kessel nur frei. Innerhalb der Freigabe regelt der Kessel selbst: Heizkurve, Modulation, eigene Sperrzeit.",
+          "finish_burner_cycle": "Soll die Freigabe enden, während der Brenner noch brennt, wartet HeatConductor das Ende des Brennerlaufs ab. Braucht einen Brenner-Sensor oder den Gaszähler.",
+          "end_after_burner_cycle": "Endet ein Brennerlauf und liegt der Bedarf unter der Start-Schwelle, endet auch die Freigabe. Sonst zündet der Kessel nach seiner Sperrzeit erneut."
         }
       },
       "energy": {
@@ -379,7 +385,7 @@
         "state": {
           "starting": "Startet",
           "off": "Aus",
-          "heating": "Heizt",
+          "heating": "Freigegeben",
           "frost_protection": "Frostschutz",
           "summer": "Sommer",
           "manual": "Manuell",
@@ -402,14 +408,16 @@
           "summer_mode": "Heizgrenze überschritten",
           "no_demand": "Kein Wärmebedarf",
           "waiting_confirmation": "Bedarf wird bestätigt",
-          "waiting_min_pause": "Wartet auf Mindestpause",
-          "waiting_max_starts": "Max. Starts pro Stunde erreicht",
-          "demand_start": "Start wegen Wärmebedarf",
-          "deficit_start": "Start wegen Temperaturdefizit",
-          "demand_continues": "Heizt, Bedarf besteht",
-          "min_runtime": "Mindestlaufzeit",
+          "waiting_min_pause": "Wartet auf Mindestpause zwischen Freigaben",
+          "waiting_max_starts": "Max. Freigaben pro Stunde erreicht",
+          "demand_start": "Freigabe wegen Wärmebedarf",
+          "deficit_start": "Freigabe wegen Temperaturdefizit",
+          "demand_continues": "Freigabe läuft, Bedarf besteht",
+          "min_runtime": "Mindest-Freigabedauer",
           "demand_satisfied": "Bedarf gedeckt",
-          "residual_heat": "Restwärme reicht aus"
+          "residual_heat": "Alle Räume über Soll",
+          "burner_finishing": "Brennerlauf wird zu Ende geführt",
+          "burner_cycle_done": "Brennerlauf beendet, Bedarf gering"
         }
       },
       "outdoor_temperature": {
@@ -419,10 +427,10 @@
         "name": "Außentemperatur geglättet"
       },
       "boiler_starts_today": {
-        "name": "Kesselstarts heute"
+        "name": "Kessel-Freigaben heute"
       },
       "boiler_runtime_today": {
-        "name": "Kessellaufzeit heute"
+        "name": "Kessel-Freigabedauer heute"
       },
       "burner_starts_today": {
         "name": "Brennerstarts heute"
@@ -549,6 +557,10 @@
     "boiler_summer_mode": {
       "title": "Kessel steht auf Sommerbetrieb",
       "description": "HeatConductor fordert Wärme an, der Kessel hat den Heizbetrieb aber abgeschaltet. Stelle den Kessel oder den Einbauregler auf Winterbetrieb."
+    },
+    "boiler_not_heating": {
+      "title": "Kessel heizt trotz Freigabe nicht",
+      "description": "Der Kessel ist seit über 30 Minuten freigegeben, der Brenner hat nicht gezündet und das Wasser liegt deutlich unter dem Vorlauf-Soll. Prüfe den Einbauregler (eigenes Zeitprogramm oder Absenkung), die Betriebsart am Kessel und die Störungsanzeige."
     }
   },
   "services": {

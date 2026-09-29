@@ -1,9 +1,17 @@
-"""Boiler state machine: decides whether heat is requested.
+"""Boiler state machine: decides whether heat is released to the boiler.
 
-Protects the boiler against short cycling (minimum run time, minimum pause,
-maximum starts per hour) and applies the safety rules. In observation mode the
-same logic runs against a virtual boiler, so its decisions can be compared with
-reality before it is allowed to switch anything.
+The relay replaces the room thermostat contact of the boiler. It does not switch
+the burner: while the release is on, the boiler follows its own controller
+(heating curve, modulation, anti-cycling lock) and may fire several times. What
+HeatConductor controls is when a release starts and ends:
+
+- minimum release time, minimum pause and maximum releases per hour,
+- a running burner is not cut off: the release ends after the burner cycle,
+- once a burner cycle is done and the demand would not justify a new release,
+  the release ends instead of letting the boiler fire again after its lock time.
+
+In observation mode the same logic runs against a virtual boiler, so its
+decisions can be compared with reality before it is allowed to switch anything.
 """
 
 from __future__ import annotations
@@ -32,6 +40,7 @@ class BoilerInputs:
     actuator_active: bool
     relay_on: bool | None
     forecast_outdoor: float | None = None
+    burner_on: bool | None = None  # the real burner (sensor or gas flow)
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +53,7 @@ class BoilerDecision:
     command_allowed: bool
     remaining: timedelta | None
     starts_last_hour: int
+    release_burner_starts: int = 0
 
 
 class BoilerController:
@@ -63,6 +73,12 @@ class BoilerController:
         self._manual_until: datetime | None = None
         self._last_command: bool | None = None
         self._last_relay: bool | None = None
+        # Burner within the current release (only while the relay is really switched).
+        self.release_burner_starts = 0
+        self._burner_seen = False
+        self._last_burner: bool | None = None
+        self._burner_firing = False
+        self._finish_since: datetime | None = None
 
     # -- persistence -------------------------------------------------------
 
@@ -100,6 +116,7 @@ class BoilerController:
             self._started_at = now
         while self.starts and now - self.starts[0] >= HOUR:
             self.starts.popleft()
+        self._track_burner(inp)
 
         if not inp.automation_enabled:
             self._last_relay = None
@@ -179,6 +196,18 @@ class BoilerController:
                 return self._stop(now, BoilerState.OFF, Reason.RESIDUAL_HEAT)
             if total <= p.stop_threshold and not immediate:
                 return self._stop(now, BoilerState.OFF, Reason.DEMAND_SATISFIED)
+            if (
+                p.end_after_burner_cycle
+                and self._burner_seen
+                and inp.actuator_active
+                and inp.burner_on is False
+                and total < p.start_threshold
+                and not immediate
+            ):
+                # The boiler finished a burner cycle and would fire again after its lock
+                # time for a demand that would not start a new release.
+                return self._stop(now, BoilerState.OFF, Reason.BURNER_CYCLE_DONE)
+            self._finish_since = None
             return self._decide(BoilerState.HEATING, Reason.DEMAND_CONTINUES)
 
         if total < p.start_threshold:
@@ -201,6 +230,19 @@ class BoilerController:
         )
 
     # -- helpers -----------------------------------------------------------
+
+    def _track_burner(self, inp: BoilerInputs) -> None:
+        """Count burner starts within the current release."""
+        switching = inp.actuator_active and self.is_on
+        self._burner_firing = switching and inp.burner_on is True
+        if not switching:
+            self._last_burner = None
+            return
+        if inp.burner_on is True and self._last_burner is not True:
+            self.release_burner_starts += 1
+            self._burner_seen = True
+        if inp.burner_on is not None:
+            self._last_burner = inp.burner_on
 
     def _track_relay(self, relay_on: bool, now: datetime) -> None:
         """Follow the physical relay and detect switching we did not command."""
@@ -255,6 +297,17 @@ class BoilerController:
                 return self._decide(
                     BoilerState.HEATING, Reason.MIN_RUNTIME, remaining=p.min_run - ran
                 )
+        if self.is_on and not hard and p.finish_burner_cycle and self._burner_firing:
+            # Cutting a running burner wastes its start: let the cycle end first.
+            if self._finish_since is None:
+                self._finish_since = now
+            waited = now - self._finish_since
+            if waited < p.finish_timeout:
+                return self._decide(
+                    BoilerState.HEATING,
+                    Reason.BURNER_FINISHING,
+                    remaining=p.finish_timeout - waited,
+                )
         if self.is_on:
             self._switch(False, now)
         return self._decide(state, reason)
@@ -263,6 +316,10 @@ class BoilerController:
         if on == self.is_on:
             return
         self.is_on = on
+        self.release_burner_starts = 0
+        self._burner_seen = False
+        self._last_burner = None
+        self._finish_since = None
         if on:
             self.on_since = now
             self.starts.append(now)
@@ -285,6 +342,7 @@ class BoilerController:
             command_allowed=command,
             remaining=remaining,
             starts_last_hour=len(self.starts),
+            release_burner_starts=self.release_burner_starts,
         )
 
 

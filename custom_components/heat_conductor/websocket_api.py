@@ -140,6 +140,7 @@ def build_state(hass: HomeAssistant, coordinator: HeatConductorCoordinator) -> d
                 if decision.remaining
                 else None,
                 "starts_last_hour": decision.starts_last_hour,
+                "release_burner_starts": decision.release_burner_starts,
                 "on_since": _jsonable(coordinator.engine.boiler.on_since),
                 "off_since": _jsonable(coordinator.engine.boiler.off_since),
             },

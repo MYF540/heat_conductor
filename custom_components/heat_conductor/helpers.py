@@ -90,6 +90,7 @@ class IssueTracker:
             "watchdog_unreachable": watchdog_problem,
             "relay_feedback_mismatch": result.diagnosis.relay_mismatch,
             "boiler_summer_mode": result.diagnosis.summer_mode_conflict,
+            "boiler_not_heating": result.diagnosis.not_heating,
         }
         for issue_id, present in conditions.items():
             if not present:

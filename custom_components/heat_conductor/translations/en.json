@@ -115,21 +115,27 @@
           "stop_threshold": "Stop threshold (total demand)",
           "immediate_start_deficit": "Immediate start at room deficit",
           "deficit_full_scale": "Deficit for 100 % room demand",
-          "min_run": "Minimum burner run time",
-          "min_pause": "Minimum pause",
-          "max_starts_per_hour": "Maximum starts per hour",
+          "min_run": "Minimum release time",
+          "min_pause": "Minimum pause between releases",
+          "max_starts_per_hour": "Maximum releases per hour",
           "heating_limit": "Heating limit (smoothed outdoor temperature)",
           "frost_limit": "Frost protection room temperature",
           "max_flow_temperature": "Maximum flow temperature",
           "stale_after": "Values count as outdated after",
           "manual_override": "Pause after manual switching",
           "outdoor_smoothing": "Outdoor temperature smoothing",
-          "burner_flow_threshold": "Gas flow that counts as burner on"
+          "burner_flow_threshold": "Gas flow that counts as burner on",
+          "finish_burner_cycle": "Do not cut a running burner",
+          "finish_timeout": "Wait at most this long for the burner to stop",
+          "end_after_burner_cycle": "End after the burner cycle when demand is low"
         },
         "data_description": {
           "start_threshold": "The boiler starts when the weighted demand of all rooms stays above this value for the confirmation time.",
           "immediate_start_deficit": "A room this far below its target starts the boiler without confirmation.",
-          "heating_limit": "Above this smoothed outdoor temperature the boiler stays off (except in comfort mode and for frost protection)."
+          "heating_limit": "Above this smoothed outdoor temperature the boiler stays off (except in comfort mode and for frost protection).",
+          "min_run": "The relay only releases the boiler. Within the release the boiler controls itself: heating curve, modulation, its own anti-cycling lock.",
+          "finish_burner_cycle": "If the release should end while the burner is firing, HeatConductor waits for the burner cycle to end. Needs a burner sensor or the gas meter.",
+          "end_after_burner_cycle": "When a burner cycle ends and the demand is below the start threshold, the release ends as well. Otherwise the boiler fires again after its lock time."
         }
       },
       "energy": {
@@ -379,7 +385,7 @@
         "state": {
           "starting": "Starting",
           "off": "Off",
-          "heating": "Heating",
+          "heating": "Released",
           "frost_protection": "Frost protection",
           "summer": "Summer",
           "manual": "Manual",
@@ -402,14 +408,16 @@
           "summer_mode": "Heating limit exceeded",
           "no_demand": "No heat demand",
           "waiting_confirmation": "Confirming demand",
-          "waiting_min_pause": "Waiting for minimum pause",
-          "waiting_max_starts": "Maximum starts per hour reached",
-          "demand_start": "Started on heat demand",
-          "deficit_start": "Started on temperature deficit",
-          "demand_continues": "Heating, demand continues",
-          "min_runtime": "Minimum run time",
+          "waiting_min_pause": "Waiting for the pause between releases",
+          "waiting_max_starts": "Maximum releases per hour reached",
+          "demand_start": "Released on heat demand",
+          "deficit_start": "Released on temperature deficit",
+          "demand_continues": "Release running, demand continues",
+          "min_runtime": "Minimum release time",
           "demand_satisfied": "Demand satisfied",
-          "residual_heat": "Residual heat is sufficient"
+          "residual_heat": "All rooms above target",
+          "burner_finishing": "Letting the burner cycle finish",
+          "burner_cycle_done": "Burner cycle done, demand low"
         }
       },
       "outdoor_temperature": {
@@ -419,10 +427,10 @@
         "name": "Outdoor temperature smoothed"
       },
       "boiler_starts_today": {
-        "name": "Boiler starts today"
+        "name": "Boiler releases today"
       },
       "boiler_runtime_today": {
-        "name": "Boiler runtime today"
+        "name": "Boiler release time today"
       },
       "burner_starts_today": {
         "name": "Burner starts today"
@@ -549,6 +557,10 @@
     "boiler_summer_mode": {
       "title": "Boiler is in summer mode",
       "description": "HeatConductor requests heat, but the boiler has heating switched off. Set the boiler or its built-in controller to winter mode."
+    },
+    "boiler_not_heating": {
+      "title": "Boiler does not heat despite the release",
+      "description": "The boiler has been released for more than 30 minutes, the burner has not lit and the water is well below the flow setpoint. Check the built-in controller (own time program or setback), the boiler's operating mode and its fault display."
     }
   },
   "services": {

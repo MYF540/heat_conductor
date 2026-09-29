@@ -27,6 +27,9 @@ OFFSET_SMOOTHING = timedelta(hours=24)
 OFFSET_MIN_SAMPLES = 12  # one hour of circulation
 SUSPECT_DEVIATION = 5.0  # K away from the learned offset
 SUSPECT_DELAY = timedelta(minutes=30)
+# A release that never lights the burner although the water is clearly below target.
+NOT_HEATING_AFTER = timedelta(minutes=30)
+NOT_HEATING_MARGIN = 5.0  # K below the controller's flow setpoint
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +50,7 @@ class BoilerDiagnosis:
     return_deviation: float | None = None  # pipe return minus boiler return
     boiler_spread: float | None = None  # boiler flow minus return (boiler or pipe)
     flow_sensor_suspect: bool = False
+    not_heating: bool = False  # released, but the burner does not fire
 
 
 class DiagnosisTracker:
@@ -58,6 +62,8 @@ class DiagnosisTracker:
         self.flow_offset_samples: int = 0
         self._offset_at: datetime | None = None
         self._suspect_since: datetime | None = None
+        self._release_since: datetime | None = None
+        self._burner_in_release = False
 
     def update(
         self,
@@ -74,6 +80,7 @@ class DiagnosisTracker:
         pipe_return: float | None = None,
         boiler_flow: float | None = None,
         boiler_return: float | None = None,
+        flow_setpoint: float | None = None,
     ) -> BoilerDiagnosis:
         """Evaluate the current feedback."""
         disagree = (
@@ -85,6 +92,14 @@ class DiagnosisTracker:
             self.mismatch_since = now
         mismatch = (
             self.mismatch_since is not None and now - self.mismatch_since >= RELAY_FEEDBACK_DELAY
+        )
+        not_heating = self._check_not_heating(
+            now,
+            relay_on=relay_on,
+            burner_on=burner_on,
+            burner_lock=burner_lock,
+            water=boiler_flow if boiler_flow is not None else pipe_flow,
+            flow_setpoint=flow_setpoint,
         )
         flow_deviation = _diff(pipe_flow, boiler_flow)
         circulating = pump_on is not False
@@ -111,6 +126,36 @@ class DiagnosisTracker:
             if circulating
             else None,
             flow_sensor_suspect=suspect,
+            not_heating=not_heating,
+        )
+
+    def _check_not_heating(
+        self,
+        now: datetime,
+        *,
+        relay_on: bool | None,
+        burner_on: bool | None,
+        burner_lock: float | None,
+        water: float | None,
+        flow_setpoint: float | None,
+    ) -> bool:
+        """Released for a while, burner never lit, water well below the setpoint."""
+        if not relay_on:
+            self._release_since = None
+            self._burner_in_release = False
+            return False
+        if self._release_since is None:
+            self._release_since = now
+        if burner_on:
+            self._burner_in_release = True
+        return (
+            burner_on is False
+            and not self._burner_in_release
+            and now - self._release_since >= NOT_HEATING_AFTER
+            and not (burner_lock is not None and burner_lock > 0)
+            and water is not None
+            and flow_setpoint is not None
+            and water < flow_setpoint - NOT_HEATING_MARGIN
         )
 
     def _check_flow_offset(self, now: datetime, deviation: float | None, circulating: bool) -> bool:

@@ -18,8 +18,11 @@ Lernfunktionen und nachvollziehbaren Entscheidungen im eigenen Panel.
 
 **Kessel**
 - Wärmebedarf je Raum aus Ventilöffnung und Temperaturdefizit, gewichteter Gesamtbedarf
-- Zustandsautomat mit Bestätigungszeit, Mindestlaufzeit, Mindestpause, max. Starts pro Stunde
-- Restwärme nutzen: Brenner stoppt, wenn alle Räume über Soll liegen
+- **Freigabe über den Raumthermostat-Eingang** des Kessels: Bestätigungszeit,
+  Mindest-Freigabedauer, Pause zwischen Freigaben, max. Freigaben pro Stunde
+- Brennerbewusst: ein laufender Brenner wird nicht abgeschaltet, und nach einem Brennerlauf
+  endet die Freigabe, wenn der Bedarf für einen Neustart nicht reicht
+- Freigabe endet, wenn alle Räume über Soll liegen
 - Heizgrenze auf geglätteter Außentemperatur, aufgehoben bei kalter Wettervorhersage
 - Sicherheit: veraltete Werte, Sicherheitsabschaltung ohne Daten, Übertemperatur, Frostschutz,
   Erkennung manuellen Schaltens, **Relais-Watchdog** auf dem Shelly, **Reparaturhinweise** in HA
@@ -214,7 +217,30 @@ der Rohrfühler länger als 30 min mehr als 5 K davon abweicht – etwa bei eine
 *Spreizung am Kessel* rechnet mit dem Kesselvorlauf und dem Rücklauf-Rohrfühler, falls der Kessel
 keinen eigenen Rücklauffühler hat; die bisherige *Spreizung* bleibt die der beiden Rohrfühler.
 
-Relais-Rückmeldung und Sommerbetrieb erscheinen als Störung und nach 5 min als Reparaturhinweis.
+Relais-Rückmeldung, Sommerbetrieb und „Kessel heizt trotz Freigabe nicht“ erscheinen als
+Störung und nach 5 min als Reparaturhinweis.
+
+### Wie HeatConductor den Kessel steuert
+
+Das Relais ersetzt den Raumthermostat-Kontakt (Klemmen 3-4). Es **schaltet nicht den Brenner**,
+sondern gibt den Kessel frei. Innerhalb der Freigabe regelt der Kessel selbst: Der Einbauregler
+bestimmt das Vorlauf-Soll aus der Heizkurve, der Kessel moduliert und zündet, bis das Soll
+erreicht ist, und sperrt danach den Brenner für seine eigene Sperrzeit. Die Pumpe läuft nur,
+solange freigegeben ist.
+
+HeatConductor entscheidet deshalb über **Beginn und Ende der Freigaben**:
+
+| Regel | Wirkung |
+|---|---|
+| Start-/Stopp-Schwelle, Bestätigungszeit | Freigabe nur bei echtem Bedarf aller Räume |
+| Mindest-Freigabedauer, Pause, max. Freigaben pro Stunde | wenige, dafür sinnvolle Freigaben |
+| **Laufenden Brenner nicht abschalten** | Soll die Freigabe enden, während der Brenner brennt, wird das Ende des Brennerlaufs abgewartet (höchstens 30 min). Ein abgebrochener Brennerlauf kostet einen Start ohne Nutzen. |
+| **Nach dem Brennerlauf bei geringem Bedarf beenden** | Endet ein Brennerlauf und liegt der Bedarf unter der Start-Schwelle, endet auch die Freigabe. Sonst zündet der Kessel nach seiner Sperrzeit für einen Rest-Bedarf erneut. |
+| **Kessel heizt trotz Freigabe nicht** | 30 min freigegeben, Brenner nie gezündet, Wasser deutlich unter dem Vorlauf-Soll → Hinweis, z. B. wenn der Einbauregler noch ein eigenes Zeitprogramm mit Absenkung fährt |
+
+Die brennerbewussten Regeln brauchen einen Brenner-Sensor (z. B. X6 *Flamme*) oder den Gaszähler
+und wirken nur, wenn HeatConductor das Relais wirklich schaltet (nicht im Beobachtungsmodus).
+Im Panel zeigt die Übersicht die Brennerstarts der laufenden Freigabe.
 
 ### Relais-Watchdog (Shelly)
 

@@ -16,7 +16,7 @@ const I18N = {
     boiler: "Kessel",
     state: "Zustand",
     reason: "Grund",
-    requestHeat: "Wärmeanforderung",
+    requestHeat: "Kessel freigegeben",
     burner: "Brenner",
     yes: "ja", no: "nein", unknown: "unbekannt",
     observation: "Beobachtungsmodus", automation: "Automatik", roomControl: "Raumsteuerung",
@@ -24,8 +24,10 @@ const I18N = {
     totalDemand: "Gesamtbedarf",
     startThreshold: "Start-Schwelle", stopThreshold: "Stopp-Schwelle",
     timers: "Zeitschutz",
-    confirm: "Bestätigung", minRun: "Mindestlaufzeit", minPause: "Mindestpause",
-    startsHour: "Starts in der letzten Stunde",
+    confirm: "Bestätigung", minRun: "Mindest-Freigabedauer", minPause: "Pause zwischen Freigaben",
+    startsHour: "Freigaben in der letzten Stunde",
+    burnerStartsRelease: "Brennerstarts in dieser Freigabe",
+    notHeating: "Kessel heizt trotz Freigabe nicht – Einbauregler prüfen",
     remaining: "Rest",
     outdoor: "Außen", smoothed: "geglättet", forecast: "Vorhersage 12 h",
     flow: "Vorlauf", return: "Rücklauf", spread: "Spreizung",
@@ -116,13 +118,15 @@ const I18N = {
     loading: "Loading …",
     notLoaded: "HeatConductor is not set up.",
     refresh: "Refresh",
-    boiler: "Boiler", state: "State", reason: "Reason", requestHeat: "Heat request", burner: "Burner",
+    boiler: "Boiler", state: "State", reason: "Reason", requestHeat: "Boiler released", burner: "Burner",
     yes: "yes", no: "no", unknown: "unknown",
     observation: "Observation mode", automation: "Automation", roomControl: "Room control",
     on: "on", off: "off",
     totalDemand: "Total demand", startThreshold: "Start threshold", stopThreshold: "Stop threshold",
-    timers: "Timers", confirm: "Confirmation", minRun: "Minimum run", minPause: "Minimum pause",
-    startsHour: "Starts in the last hour", remaining: "left",
+    timers: "Timers", confirm: "Confirmation", minRun: "Minimum release", minPause: "Pause between releases",
+    startsHour: "Releases in the last hour", remaining: "left",
+    burnerStartsRelease: "Burner starts in this release",
+    notHeating: "Boiler does not heat despite the release – check the built-in controller",
     outdoor: "Outdoor", smoothed: "smoothed", forecast: "Forecast 12 h",
     flow: "Flow", return: "Return", spread: "Spread",
     energyToday: "Gas today", power: "Power", modulation: "Modulation",
@@ -204,14 +208,17 @@ const I18N = {
 
 const PARAM_TEXT = {
   de: {
-    start_threshold: ["Start-Schwelle (Gesamtbedarf)", "Gewichteter Bedarf aller Räume, ab dem der Kessel starten darf.", "Weniger, dafür längere Brennerläufe; Räume kühlen etwas stärker aus."],
+    start_threshold: ["Start-Schwelle (Gesamtbedarf)", "Gewichteter Bedarf aller Räume, ab dem der Kessel freigegeben wird.", "Seltener freigegeben, dafür mehr Wärme je Freigabe; Räume kühlen etwas stärker aus."],
     start_confirm: ["Bestätigungszeit", "So lange muss der Bedarf über der Start-Schwelle liegen.", "Kurze Bedarfsspitzen (z. B. Lüften) lösen keinen Start aus; Reaktion träger."],
-    stop_threshold: ["Stopp-Schwelle (Gesamtbedarf)", "Unter diesem Bedarf darf der Kessel ausgehen.", "Kessel geht früher aus, Restwärme wird stärker genutzt."],
+    stop_threshold: ["Stopp-Schwelle (Gesamtbedarf)", "Unter diesem Bedarf endet die Freigabe.", "Freigabe endet früher."],
     immediate_start_deficit: ["Sofortstart ab Raumdefizit", "Liegt ein Raum so weit unter Soll, startet der Kessel ohne Bestätigung.", "Seltener Sofortstarts, einzelne kalte Räume warten länger."],
     deficit_full_scale: ["Defizit für 100 % Raumbedarf", "Umrechnung Temperaturdefizit in Raumbedarf.", "Defizite wirken schwächer, die Ventilöffnung dominiert."],
-    min_run: ["Mindestlaufzeit", "Kürzeste Brennerlaufzeit nach einem Start.", "Weniger Takten, mögliche Überschwinger der Raumtemperatur."],
-    min_pause: ["Mindestpause", "Kürzeste Pause zwischen zwei Starts.", "Weniger Starts, längere Wartezeit bei neuem Bedarf."],
-    max_starts_per_hour: ["Max. Starts pro Stunde", "Harte Obergrenze für Brennerstarts.", "Mehr Flexibilität, mehr Verschleiß."],
+    min_run: ["Mindest-Freigabedauer", "Kürzeste Dauer einer Freigabe. Das Relais gibt den Kessel nur frei; Brenner, Modulation und Sperrzeit regelt der Kessel selbst.", "Weniger Freigaben, mögliche Überschwinger der Raumtemperatur."],
+    min_pause: ["Mindestpause zwischen Freigaben", "Kürzeste Pause zwischen zwei Freigaben.", "Weniger Freigaben, längere Wartezeit bei neuem Bedarf."],
+    max_starts_per_hour: ["Max. Freigaben pro Stunde", "Harte Obergrenze für Freigaben. Die Brennerstarts innerhalb einer Freigabe begrenzt der Kessel mit seiner Sperrzeit.", "Mehr Flexibilität, mehr Brennerstarts."],
+    finish_burner_cycle: ["Laufenden Brenner nicht abschalten", "Soll die Freigabe enden, während der Brenner brennt, wird das Ende des Brennerlaufs abgewartet. Ein abgebrochener Brennerlauf kostet einen Start ohne Nutzen.", null],
+    finish_timeout: ["Höchstens so lange warten", "Längste Wartezeit auf das Ende des Brennerlaufs.", "Brennerläufe werden auch bei langem Nachheizen zu Ende geführt."],
+    end_after_burner_cycle: ["Nach Brennerlauf bei geringem Bedarf beenden", "Endet ein Brennerlauf und liegt der Bedarf unter der Start-Schwelle, endet die Freigabe. Sonst zündet der Kessel nach seiner Sperrzeit für einen Rest-Bedarf erneut.", null],
     heating_limit: ["Heizgrenze", "Über dieser geglätteten Außentemperatur bleibt der Kessel aus (außer Komfort, Frostschutz oder kalte Vorhersage).", "Heizt auch an milderen Tagen."],
     outdoor_smoothing: ["Glättung Außentemperatur", "Zeitkonstante der Glättung für die Heizgrenze.", "Kurze Warm- oder Kaltphasen ändern den Modus weniger."],
     frost_limit: ["Frostschutz-Raumtemperatur", "Unterschreitet ein Raum diesen Wert, heizt der Kessel immer.", "Frostschutz greift früher."],
@@ -248,19 +255,22 @@ const PARAM_TEXT = {
     curve_target_valve: ["Ziel-Ventilöffnung Engpass-Raum", "Die Heizkurven-Empfehlung legt die Kurve so, dass der am weitesten geöffnete Raum etwa so weit offen ist.", "Empfiehlt eine niedrigere Kurve; Räume brauchen weiter geöffnete Ventile."],
     optimum_start: ["Optimaler Start", "Heizt früh genug, damit zum Zeitplanbeginn die Komforttemperatur erreicht ist.", null],
     optimum_start_max_lead: ["Max. Vorlaufzeit optimaler Start", "Längste Zeit, die vor Zeitplanbeginn geheizt wird.", "Früherer Start bei großem Temperaturabstand."],
-    residual_heat: ["Restwärme nutzen", "Stoppt den Brenner, wenn alle Räume über Soll liegen.", null],
+    residual_heat: ["Freigabe beenden, wenn alle Räume über Soll", "Beendet die Freigabe, wenn alle Räume über ihrem Sollwert liegen und der Gesamtbedarf unter der Start-Schwelle ist.", null],
     use_forecast: ["Wettervorhersage nutzen", "Kalte Vorhersagen heben die Heizgrenze auf und verlängern den optimalen Start.", null],
     solar_reference: ["PV-Spitzenleistung (Sonnen-Proxy)", "Räume mit Sonnengewinnen ignorieren ihr Defizit ab 40 % dieser Leistung. 0 = aus.", "Sonnen-Proxy greift erst bei stärkerer Sonne."],
   },
   en: {
-    start_threshold: ["Start threshold (total demand)", "Weighted demand of all rooms from which the boiler may start.", "Fewer but longer burner runs; rooms cool down a little more."],
+    start_threshold: ["Start threshold (total demand)", "Weighted demand of all rooms from which the boiler is released.", "Released less often, more heat per release; rooms cool down a little more."],
     start_confirm: ["Confirmation time", "Demand must stay above the start threshold this long.", "Short spikes (e.g. airing) do not start the boiler; slower reaction."],
-    stop_threshold: ["Stop threshold (total demand)", "Below this demand the boiler may stop.", "Stops earlier, uses more residual heat."],
+    stop_threshold: ["Stop threshold (total demand)", "Below this demand the release ends.", "The release ends earlier."],
     immediate_start_deficit: ["Immediate start at room deficit", "A room this far below target starts the boiler without confirmation.", "Fewer immediate starts, single cold rooms wait longer."],
     deficit_full_scale: ["Deficit for 100 % room demand", "Conversion from temperature deficit to room demand.", "Deficits count less, valve opening dominates."],
-    min_run: ["Minimum run time", "Shortest burner run after a start.", "Less cycling, possible temperature overshoot."],
-    min_pause: ["Minimum pause", "Shortest pause between two starts.", "Fewer starts, longer wait for new demand."],
-    max_starts_per_hour: ["Max starts per hour", "Hard limit for burner starts.", "More flexibility, more wear."],
+    min_run: ["Minimum release time", "Shortest duration of a release. The relay only releases the boiler; burner, modulation and anti-cycling lock are up to the boiler.", "Fewer releases, possible temperature overshoot."],
+    min_pause: ["Minimum pause between releases", "Shortest pause between two releases.", "Fewer releases, longer wait for new demand."],
+    max_starts_per_hour: ["Max releases per hour", "Hard limit for releases. Burner starts within a release are limited by the boiler's own lock time.", "More flexibility, more burner starts."],
+    finish_burner_cycle: ["Do not cut a running burner", "If the release should end while the burner fires, the end of the burner cycle is awaited. A cut burner run costs a start without benefit.", null],
+    finish_timeout: ["Wait at most", "Longest wait for the burner cycle to end.", "Burner cycles are finished even when they run long."],
+    end_after_burner_cycle: ["End after burner cycle when demand is low", "When a burner cycle ends and the demand is below the start threshold, the release ends. Otherwise the boiler fires again after its lock time for a remaining demand.", null],
     heating_limit: ["Heating limit", "Above this smoothed outdoor temperature the boiler stays off (except comfort, frost protection or cold forecast).", "Heats on milder days too."],
     outdoor_smoothing: ["Outdoor smoothing", "Time constant of the smoothing used for the heating limit.", "Short warm or cold spells change the mode less."],
     frost_limit: ["Frost protection room temperature", "If a room falls below, the boiler always heats.", "Frost protection acts earlier."],
@@ -297,7 +307,7 @@ const PARAM_TEXT = {
     curve_target_valve: ["Target valve opening of the bottleneck room", "The heating curve suggestion places the curve so that the most open room is about this far open.", "Suggests a lower curve; rooms need wider open valves."],
     optimum_start: ["Optimum start", "Heats early enough to reach comfort temperature when the schedule begins.", null],
     optimum_start_max_lead: ["Max optimum start lead", "Longest heating time before the schedule begins.", "Earlier start for large temperature gaps."],
-    residual_heat: ["Use residual heat", "Stops the burner when all rooms are above target.", null],
+    residual_heat: ["End release when all rooms are above target", "Ends the release when all rooms are above their setpoint and the total demand is below the start threshold.", null],
     use_forecast: ["Use weather forecast", "Cold forecasts release the heating limit and extend optimum start.", null],
     solar_reference: ["PV peak power (sun proxy)", "Rooms with solar gains ignore their deficit above 40 % of this power. 0 = off.", "Sun proxy only reacts to stronger sun."],
   },
@@ -305,11 +315,11 @@ const PARAM_TEXT = {
 
 const STATE_TEXT = {
   de: {
-    starting: "Startet", off: "Aus", heating: "Heizt", frost_protection: "Frostschutz", summer: "Sommer",
+    starting: "Startet", off: "Aus", heating: "Freigegeben", frost_protection: "Frostschutz", summer: "Sommer",
     manual: "Manuell", disabled: "Deaktiviert", failsafe: "Sicherheitsabschaltung",
   },
   en: {
-    starting: "Starting", off: "Off", heating: "Heating", frost_protection: "Frost protection", summer: "Summer",
+    starting: "Starting", off: "Off", heating: "Released", frost_protection: "Frost protection", summer: "Summer",
     manual: "Manual", disabled: "Disabled", failsafe: "Failsafe",
   },
 };
@@ -319,19 +329,21 @@ const REASON_TEXT = {
     startup: "Start, warte auf Daten", automation_disabled: "Automatik deaktiviert", manual_override: "Manuell geschaltet",
     relay_unavailable: "Relais nicht erreichbar", no_data: "Keine gültigen Raumdaten", overtemperature: "Vorlauf zu heiß",
     frost_protection: "Frostschutz", mode_off: "Modus Aus", frost_only: "Nur Frostschutz", summer_mode: "Heizgrenze überschritten",
-    no_demand: "Kein Wärmebedarf", waiting_confirmation: "Bedarf wird bestätigt", waiting_min_pause: "Wartet auf Mindestpause",
-    waiting_max_starts: "Max. Starts pro Stunde erreicht", demand_start: "Start wegen Wärmebedarf",
-    deficit_start: "Start wegen Temperaturdefizit", demand_continues: "Heizt, Bedarf besteht", min_runtime: "Mindestlaufzeit",
-    demand_satisfied: "Bedarf gedeckt", residual_heat: "Restwärme reicht aus",
+    no_demand: "Kein Wärmebedarf", waiting_confirmation: "Bedarf wird bestätigt", waiting_min_pause: "Wartet auf Mindestpause zwischen Freigaben",
+    waiting_max_starts: "Max. Freigaben pro Stunde erreicht", demand_start: "Freigabe wegen Wärmebedarf",
+    deficit_start: "Freigabe wegen Temperaturdefizit", demand_continues: "Freigabe läuft, Bedarf besteht", min_runtime: "Mindest-Freigabedauer",
+    demand_satisfied: "Bedarf gedeckt", residual_heat: "Alle Räume über Soll",
+    burner_finishing: "Brennerlauf wird zu Ende geführt", burner_cycle_done: "Brennerlauf beendet, Bedarf gering",
   },
   en: {
     startup: "Starting, waiting for data", automation_disabled: "Automation disabled", manual_override: "Switched manually",
     relay_unavailable: "Relay unavailable", no_data: "No valid room data", overtemperature: "Flow temperature too high",
     frost_protection: "Frost protection", mode_off: "Mode off", frost_only: "Frost protection only", summer_mode: "Heating limit exceeded",
-    no_demand: "No heat demand", waiting_confirmation: "Confirming demand", waiting_min_pause: "Waiting for minimum pause",
-    waiting_max_starts: "Maximum starts per hour reached", demand_start: "Started on heat demand",
-    deficit_start: "Started on temperature deficit", demand_continues: "Heating, demand continues", min_runtime: "Minimum run time",
-    demand_satisfied: "Demand satisfied", residual_heat: "Residual heat is sufficient",
+    no_demand: "No heat demand", waiting_confirmation: "Confirming demand", waiting_min_pause: "Waiting for the pause between releases",
+    waiting_max_starts: "Maximum releases per hour reached", demand_start: "Released on heat demand",
+    deficit_start: "Released on temperature deficit", demand_continues: "Release running, demand continues", min_runtime: "Minimum release time",
+    demand_satisfied: "Demand satisfied", residual_heat: "All rooms above target",
+    burner_finishing: "Letting the burner cycle finish", burner_cycle_done: "Burner cycle done, demand low",
   },
 };
 
@@ -370,7 +382,51 @@ function fmt(value, digits = 1, unit = "") {
 
 /* ---------------------------------------------------------------- charts */
 
-function timeChart({ series, height = 180, yUnit = "", thresholds = [], yMin, yMax, lang }) {
+const BUCKET_MS = 5 * 60 * 1000;
+// Every rendered time chart registers its data here, so the tooltip can look values up.
+const CHART_REGISTRY = new Map();
+let CHART_SEQ = 0;
+
+/* Time-weighted mean per 5-minute bucket of a signal that holds its value until the
+ * next change (Home Assistant history). Smooths sensor spikes without shifting edges. */
+function aggregate(points, start, end, bucketMs = BUCKET_MS) {
+  if (!points.length) return [];
+  const rows = points.filter(([t]) => t < end).sort((a, b) => a[0] - b[0]);
+  const out = [];
+  let i = 0;
+  let current = null;
+  const first = Math.floor(Math.max(start, rows[0][0]) / bucketMs) * bucketMs;
+  while (i < rows.length && rows[i][0] <= first) { current = rows[i][1]; i++; }
+  for (let b = first; b < end; b += bucketMs) {
+    const bEnd = Math.min(b + bucketMs, end);
+    let sum = 0, weight = 0, t = b;
+    while (i < rows.length && rows[i][0] < bEnd) {
+      if (current !== null && Number.isFinite(current)) { sum += current * (rows[i][0] - t); weight += rows[i][0] - t; }
+      t = rows[i][0];
+      current = rows[i][1];
+      i++;
+    }
+    if (current !== null && Number.isFinite(current)) { sum += current * (bEnd - t); weight += bEnd - t; }
+    out.push([b + (bEnd - b) / 2, weight > 0 ? sum / weight : null]);
+  }
+  return out;
+}
+
+/* Value of a series at time t: held value for step series, nearest point otherwise. */
+function valueAt(points, t, step) {
+  if (!points.length) return null;
+  let lo = 0, hi = points.length - 1;
+  if (t < points[0][0]) return step ? null : points[0][1];
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (points[mid][0] <= t) lo = mid; else hi = mid - 1;
+  }
+  if (step || lo === points.length - 1) return points[lo][1];
+  const next = points[lo + 1];
+  return t - points[lo][0] <= next[0] - t ? points[lo][1] : next[1];
+}
+
+function timeChart({ series, height = 180, yUnit = "", thresholds = [], yMin, yMax, lang, yLabels = true }) {
   const width = 900;
   const pad = { l: 44, r: 12, t: 10, b: 24 };
   const all = series.flatMap((s) => s.points);
@@ -394,7 +450,7 @@ function timeChart({ series, height = 180, yUnit = "", thresholds = [], yMin, yM
     const v = lo + ((hi - lo) * i) / 4;
     const y = sy(v);
     grid.push(`<line x1="${pad.l}" x2="${width - pad.r}" y1="${y}" y2="${y}" class="grid"/>`);
-    grid.push(`<text x="${pad.l - 6}" y="${y + 4}" class="axis" text-anchor="end">${esc(fmt(v, span < 5 ? 1 : 0))}</text>`);
+    if (yLabels) grid.push(`<text x="${pad.l - 6}" y="${y + 4}" class="axis" text-anchor="end">${esc(fmt(v, span < 5 ? 1 : 0))}</text>`);
   }
   const ticks = 6;
   for (let i = 0; i <= ticks; i++) {
@@ -425,7 +481,13 @@ function timeChart({ series, height = 180, yUnit = "", thresholds = [], yMin, yM
     `<text x="${i % 2 ? pad.l + 4 : width - pad.r - 4}" y="${sy(t.value) - 4}" class="axis" text-anchor="${i % 2 ? "start" : "end"}" fill="${t.color}">${esc(t.label)}</text>`);
   const legend = series.map((s, i) =>
     `<span class="legend"><i style="background:${s.color || COLORS[i % COLORS.length]}"></i>${esc(s.name)}</span>`).join("");
-  return `<div class="chart"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">${grid.join("")}${marks.join("")}${lines.join("")}</svg><div class="legends">${legend}${yUnit ? `<span class="legend unit">${esc(yUnit)}</span>` : ""}</div></div>`;
+  const id = `c${++CHART_SEQ}`;
+  CHART_REGISTRY.set(id, {
+    series: series.map((s, i) => ({ ...s, color: s.color || COLORS[i % COLORS.length] })),
+    x0, x1, width, pad, yUnit, lang,
+  });
+  const cursor = `<line class="cursor" x1="0" x2="0" y1="${pad.t}" y2="${height - pad.b}" visibility="hidden"/>`;
+  return `<div class="chart hover" data-chart="${id}"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">${grid.join("")}${marks.join("")}${lines.join("")}${cursor}</svg><div class="tip" hidden></div><div class="legends">${legend}${yUnit ? `<span class="legend unit">${esc(yUnit)}</span>` : ""}</div></div>`;
 }
 
 function scatterChart({ points, xLabel, yLabel, line = null, suggestion = null, height = 200 }) {
@@ -757,6 +819,7 @@ class HeatConductorPanel extends HTMLElement {
   /* ------------------------------------------------------------ render */
 
   _render() {
+    CHART_REGISTRY.clear();
     const tabs = ["overview", "params", "learning", "schedule", "simulate", "log"];
     let body = "";
     if (!this._state && !this._error) body = `<div class="card">${this.t("loading")}</div>`;
@@ -781,6 +844,54 @@ class HeatConductorPanel extends HTMLElement {
       </div>`;
     const menu = this.shadowRoot.querySelector("ha-menu-button");
     if (menu && this._hass) { menu.hass = this._hass; menu.narrow = this._narrow; }
+    for (const chart of this.shadowRoot.querySelectorAll(".chart.hover")) {
+      chart.addEventListener("pointermove", (e) => this._hoverChart(chart, e));
+      chart.addEventListener("pointerleave", () => this._hideTip(chart));
+    }
+  }
+
+  _hoverChart(chart, event) {
+    const data = CHART_REGISTRY.get(chart.dataset.chart);
+    const svg = chart.querySelector("svg");
+    if (!data || !svg) return;
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const x = ((event.clientX - rect.left) / rect.width) * data.width;
+    const plotW = data.width - data.pad.l - data.pad.r;
+    const frac = (x - data.pad.l) / plotW;
+    if (frac < 0 || frac > 1) { this._hideTip(chart); return; }
+    const t = data.x0 + frac * (data.x1 - data.x0);
+    const cursor = svg.querySelector(".cursor");
+    cursor.setAttribute("x1", x);
+    cursor.setAttribute("x2", x);
+    cursor.setAttribute("visibility", "visible");
+
+    const date = new Date(t);
+    const long = data.x1 - data.x0 > 86400000;
+    const when = long
+      ? date.toLocaleString(data.lang, { weekday: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      : date.toLocaleTimeString(data.lang, { hour: "2-digit", minute: "2-digit" });
+    const rows = data.series.map((s) => {
+      const v = valueAt(s.points, t, !!s.step);
+      const text = s.format ? s.format(v) : v === null || !Number.isFinite(v) ? "–" : fmt(v, s.digits ?? 1, data.yUnit);
+      return `<div class="tip-row"><i style="background:${s.color}"></i><span>${esc(s.name)}</span><b>${esc(text)}</b></div>`;
+    }).join("");
+    const tip = chart.querySelector(".tip");
+    tip.innerHTML = `<div class="tip-time">${esc(when)}</div>${rows}`;
+    tip.hidden = false;
+    const box = chart.getBoundingClientRect();
+    const left = event.clientX - box.left;
+    const flip = left > box.width / 2;
+    tip.style.left = flip ? "" : `${left + 12}px`;
+    tip.style.right = flip ? `${box.width - left + 12}px` : "";
+    tip.style.top = `${Math.max(0, event.clientY - box.top - 20)}px`;
+  }
+
+  _hideTip(chart) {
+    const tip = chart.querySelector(".tip");
+    if (tip) tip.hidden = true;
+    const cursor = chart.querySelector(".cursor");
+    if (cursor) cursor.setAttribute("visibility", "hidden");
   }
 
   _renderOverview() {
@@ -812,7 +923,8 @@ class HeatConductorPanel extends HTMLElement {
       ${timer(this.t("confirm"), d.reason === "waiting_confirmation", p.start_confirm)}
       ${timer(this.t("minRun"), d.reason === "min_runtime", p.min_run)}
       ${timer(this.t("minPause"), d.reason === "waiting_min_pause", p.min_pause)}
-      <div class="timer"><span>${this.t("startsHour")}</span><div class="bar-bg"><div class="bar-fg warn" style="width:${Math.min(100, (d.starts_last_hour / p.max_starts_per_hour) * 100)}%"></div></div><span>${d.starts_last_hour} / ${p.max_starts_per_hour}</span></div>`;
+      <div class="timer"><span>${this.t("startsHour")}</span><div class="bar-bg"><div class="bar-fg warn" style="width:${Math.min(100, (d.starts_last_hour / p.max_starts_per_hour) * 100)}%"></div></div><span>${d.starts_last_hour} / ${p.max_starts_per_hour}</span></div>
+      ${d.request_heat && s.boiler && s.boiler.burner_active !== null ? `<div class="timer"><span>${this.t("burnerStartsRelease")}</span><div></div><span>${d.release_burner_starts ?? 0}</span></div>` : ""}`;
 
     const e = s.energy;
     const facts = [
@@ -882,6 +994,7 @@ class HeatConductorPanel extends HTMLElement {
     if (d.relay_mismatch) lines.push(this.t("relayMismatch"));
     if (d.summer_mode_conflict) lines.push(this.t("summerConflict"));
     if (d.flow_sensor_suspect) lines.push(this.t("flowSuspect"));
+    if (d.not_heating) lines.push(this.t("notHeating"));
     if (d.burner_locked && d.burner_lock_minutes) lines.push(`${this.t("burnerLock")}: ${fmt(d.burner_lock_minutes, 0, "min")}`);
     return lines.map((l) => `<div class="hint warn">${esc(l)}</div>`).join("");
   }
@@ -926,13 +1039,16 @@ class HeatConductorPanel extends HTMLElement {
     const range = `<div class="range"><button class="${this._historyRange === 24 ? "active" : ""}" data-action="range" data-hours="24">${this.t("h24")}</button><button class="${this._historyRange === 168 ? "active" : ""}" data-action="range" data-hours="168">${this.t("d7")}</button></div>`;
     if (!h) return `<div class="card"><div class="card-head"><h2>${this.t("history")}</h2>${range}</div>${this.t("loading")}</div>`;
     if (h.error) return `<div class="card"><div class="card-head"><h2>${this.t("history")}</h2>${range}</div>${esc(h.error)}</div>`;
-    const num = (rows) => rows.map(([t, v]) => [t, v === "unavailable" || v === "unknown" ? null : Number(v)]);
+    const raw = (rows) => rows.map(([t, v]) => [t, v === "unavailable" || v === "unknown" || v === "" ? null : Number(v)]);
+    // Sensors as 5-minute means, switching signals exactly as they happened.
+    const num = (rows) => aggregate(raw(rows), h.start, h.end);
     const bool = (rows) => rows.map(([t, v]) => [t, v === "on" ? 1 : v === "off" ? 0 : null]);
+    const onOff = (v) => (v === null ? "–" : v > 0 ? this.t("on") : this.t("off"));
     const p = this._state.params;
     const charts = [];
     if (h.data.total_demand?.length) {
       charts.push(timeChart({
-        series: [{ name: this.t("totalDemand"), points: num(h.data.total_demand), area: true, step: true }],
+        series: [{ name: this.t("totalDemand"), points: num(h.data.total_demand), area: true, digits: 0 }],
         thresholds: [
           { value: p.start_threshold, label: this.t("startThreshold"), color: "#e53935" },
           { value: p.stop_threshold, label: this.t("stopThreshold"), color: "#43a047" },
@@ -941,9 +1057,9 @@ class HeatConductorPanel extends HTMLElement {
       }));
     }
     const binary = [];
-    if (h.data.heat_request?.length) binary.push({ name: this.t("requestHeat"), points: bool(h.data.heat_request), step: true, color: "#ff5722" });
-    if (h.data.burner_active?.length) binary.push({ name: this.t("burner"), points: bool(h.data.burner_active).map(([t, v]) => [t, v === null ? null : v * 0.8]), step: true, color: "#1e88e5" });
-    if (binary.length) charts.push(timeChart({ series: binary, height: 90, yMin: 0, yMax: 1.1, lang: this.lang }));
+    if (h.data.heat_request?.length) binary.push({ name: this.t("requestHeat"), points: bool(h.data.heat_request), step: true, color: "#ff5722", format: onOff });
+    if (h.data.burner_active?.length) binary.push({ name: this.t("burner"), points: bool(h.data.burner_active).map(([t, v]) => [t, v === null ? null : v * 0.8]), step: true, color: "#1e88e5", format: onOff });
+    if (binary.length) charts.push(timeChart({ series: binary, height: 90, yMin: 0, yMax: 1.1, lang: this.lang, yLabels: false }));
     const temps = [];
     if (h.data.outdoor_temperature?.length) temps.push({ name: this.t("outdoor"), points: num(h.data.outdoor_temperature) });
     if (h.data.outdoor_temperature_smoothed?.length) temps.push({ name: `${this.t("outdoor")} (${this.t("smoothed")})`, points: num(h.data.outdoor_temperature_smoothed) });
@@ -1282,7 +1398,14 @@ const STYLE = `
   tr.window_open td { color: var(--info-color, #039be5); }
   .mini { display:inline-block; width: 60px; height: 8px; background: var(--secondary-background-color, #eee); border-radius: 4px; margin-right: 6px; vertical-align: middle; overflow:hidden; }
   .mini div { height:100%; background: var(--primary-color); }
-  .chart { margin: 8px 0 16px; }
+  .chart { margin: 8px 0 16px; position: relative; }
+  .chart .cursor { stroke: var(--secondary-text-color); stroke-width: 1; stroke-dasharray: 3 3; }
+  .tip { position: absolute; pointer-events: none; z-index: 2; min-width: 140px; padding: 6px 8px; border-radius: 6px;
+    background: var(--card-background-color, #fff); color: var(--primary-text-color); font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25); border: 1px solid var(--divider-color); }
+  .tip-time { font-weight: 600; margin-bottom: 4px; }
+  .tip-row { display: grid; grid-template-columns: 10px 1fr auto; gap: 6px; align-items: center; white-space: nowrap; }
+  .tip-row i { width: 10px; height: 3px; display: inline-block; }
   .chart svg { width: 100%; height: auto; display:block; }
   .chart.small svg { max-height: 240px; }
   .chart-title { font-size: 13px; color: var(--secondary-text-color); margin-bottom: 4px; }
