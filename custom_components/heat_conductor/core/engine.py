@@ -561,9 +561,18 @@ class HeatingEngine:
                 toggled = co_heat != runtime.co_heat_written
                 # Closing writes must get through a high duty cycle: a thermostat left
                 # open heats on its own.
+                # A thermostat still on the opening temperature lost its restoring write.
+                left_open = not co_heat and any(
+                    trv.current_target is not None
+                    and abs(trv.current_target - np_.opening_temperature) < 0.25
+                    and setpoint.target < trv.current_target - 0.25
+                    for trv in control.trvs
+                )
                 urgent = (
-                    runtime.co_heat_written and not co_heat
-                ) or setpoint.source in CLOSING_SOURCES
+                    (runtime.co_heat_written and not co_heat)
+                    or left_open
+                    or setpoint.source in CLOSING_SOURCES
+                )
                 issued: set[str] = set()
                 for trv in control.trvs:
                     state = runtime.trvs.setdefault(trv.entity_id, TrvState())
@@ -601,8 +610,9 @@ class HeatingEngine:
                 ):
                     # Restored, or the thermostats do not hold the opening temperature.
                     runtime.co_heat_written = False
-        elif duty_cycle_ok:
-            # Without room control the thermostats get back what they had before.
+        else:
+            # Without room control the thermostats get back what they had before,
+            # whatever the duty cycle says: an open thermostat heats on its own.
             for setpoint in setpoints:
                 runtime = self.runtime(setpoint.room_id)
                 if not runtime.co_heat_written:
