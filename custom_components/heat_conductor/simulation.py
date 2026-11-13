@@ -10,10 +10,10 @@ from functools import partial
 from typing import Any
 
 from homeassistant.core import HomeAssistant, State
-from homeassistant.util import dt as dt_util
 
 from .coordinator import HeatConductorCoordinator
 from .core.engine import HeatingEngine
+from .helpers import control_now
 from .inputs import ControlState, EntityConfig, InputReader, build_snapshot
 from .params import (
     control_params,
@@ -118,7 +118,7 @@ async def async_simulate(
     from homeassistant.components.recorder import get_instance, history
 
     hours = max(1, min(hours, MAX_HOURS))
-    end = dt_util.now().replace(second=0, microsecond=0)
+    end = control_now().replace(second=0, microsecond=0)
     start = end - timedelta(hours=hours)
     entity_ids = sorted(coordinator.entities.tracked_entities)
 

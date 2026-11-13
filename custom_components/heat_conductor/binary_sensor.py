@@ -8,11 +8,11 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass, Bina
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
 
 from .coordinator import HeatConductorConfigEntry, HeatConductorCoordinator, RoomConfig
 from .core.models import BoilerState, RoomKind, RoomStatus
 from .entity import HeatConductorEntity, RoomEntity
+from .helpers import control_now
 
 
 async def async_setup_entry(
@@ -66,7 +66,7 @@ class VacationSensor(HeatConductorEntity, BinarySensorEntity):
         auto = self.coordinator.engine.auto_vacation
         settings = self.coordinator.settings
         source = "off"
-        if settings.vacation_active(dt_util.now()):
+        if settings.vacation_active(control_now()):
             source = "scheduled"
         elif auto.active:
             source = "automatic"

@@ -40,7 +40,7 @@ from .core.engine import EngineResult, HeatingEngine
 from .core.models import ControlParams, OperatingMode
 from .core.setpoint import SetpointParams, TrvCommand
 from .core.sleep import SleepParams
-from .helpers import IssueTracker, async_fetch_forecast, async_send_heartbeat
+from .helpers import IssueTracker, async_fetch_forecast, async_send_heartbeat, control_now
 from .inputs import ControlState, EntityConfig, InputReader, RoomConfig, build_snapshot
 from .params import (
     control_params,
@@ -147,7 +147,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
         )
         self._issues = IssueTracker(hass)
-        self._started_at = dt_util.now()
+        self._started_at = control_now()
         self._last_command: bool | None = None
         self._last_command_at: datetime | None = None
         self._last_heartbeat: datetime | None = None
@@ -224,7 +224,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
         """Heartbeat accepted recently (None without watchdog)."""
         if self.entities.watchdog_url is None:
             return None
-        now = now or dt_util.now()
+        now = now or control_now()
         return (
             self.watchdog_ok_at is not None and now - self.watchdog_ok_at <= WATCHDOG_INTERVAL * 3
         )
@@ -332,14 +332,14 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
 
     async def async_set_room_target(self, room_id: str, temperature: float) -> None:
         """Temporary manual target for a room."""
-        self.engine.set_override(room_id, dt_util.now(), temperature)
+        self.engine.set_override(room_id, control_now(), temperature)
         await self._settings_changed()
 
     async def async_boost(
         self, room_id: str, duration: timedelta | None = None, temperature: float | None = None
     ) -> None:
         """Boost a room."""
-        self.engine.set_boost(room_id, dt_util.now(), duration, temperature)
+        self.engine.set_boost(room_id, control_now(), duration, temperature)
         await self._settings_changed()
 
     async def async_clear_override(self, room_id: str) -> None:
@@ -361,7 +361,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
         self.settings.vacation_start = None
         self.settings.vacation_end = None
         self.settings.vacation_temp = None
-        self.engine.auto_vacation.reset(dt_util.now())
+        self.engine.auto_vacation.reset(control_now())
         await self._settings_changed()
 
     async def async_reset_learning(self, room_id: str | None = None) -> None:
@@ -371,7 +371,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
 
     async def async_set_params(self, values: dict[str, float | bool], user: str | None) -> None:
         """Change parameters (validated by the caller) and log the change."""
-        now = dt_util.now()
+        now = control_now()
         new_options = dict(self._options)
         for key, value in values.items():
             old = self._options.get(key, ALL_DEFAULTS[key])
@@ -395,7 +395,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
     # -- evaluation --------------------------------------------------------
 
     async def _async_update_data(self) -> EngineResult:
-        now = dt_util.now()
+        now = control_now()
         self._schedule_forecast(now)
         base_setpoint = self.setpoint_params
         if self.settings.vacation_temp is not None:
@@ -514,7 +514,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
 
         async def _beat() -> None:
             if await async_send_heartbeat(self.hass, url, armed):
-                self.watchdog_ok_at = dt_util.now()
+                self.watchdog_ok_at = control_now()
 
         self.config_entry.async_create_background_task(self.hass, _beat(), f"{DOMAIN}_heartbeat")
 
@@ -528,7 +528,7 @@ class HeatConductorCoordinator(DataUpdateCoordinator[EngineResult]):
 
         async def _fetch() -> None:
             self.forecast_6h, self.forecast_12h = await async_fetch_forecast(
-                self.hass, weather, dt_util.now()
+                self.hass, weather, control_now()
             )
 
         self.config_entry.async_create_background_task(self.hass, _fetch(), f"{DOMAIN}_forecast")

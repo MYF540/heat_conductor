@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from custom_components.heat_conductor.core.boiler_fsm import BoilerController, BoilerInputs
 from custom_components.heat_conductor.core.demand import DemandSummary
@@ -343,3 +343,19 @@ def test_persistent_deficit_respects_min_pause() -> None:
     assert waiting.reason is Reason.WAITING_MIN_PAUSE
     assert not waiting.request_heat
     assert fsm.step(inputs(minutes(35), starving)).reason is Reason.PERSISTENT_DEFICIT
+
+
+def test_min_runtime_counts_real_time_across_a_clock_change() -> None:
+    """Fixed-offset local times (as the HA layer hands them in) stay exact."""
+    cest = timezone(timedelta(hours=2))
+    cet = timezone(timedelta(hours=1))
+    fsm = BoilerController(PARAMS)
+    fsm.step(inputs(datetime(2026, 10, 25, 2, 40, tzinfo=cest), demand(0.2, max_deficit=1.2)))
+    # 02:50 CEST, 10 real minutes in: held for the 10 that remain.
+    held = fsm.step(inputs(datetime(2026, 10, 25, 2, 50, tzinfo=cest), demand(0.0)))
+    assert held.reason is Reason.MIN_RUNTIME
+    assert held.remaining == timedelta(minutes=10)
+    # 02:00 CET is 20 real minutes in (02:40 CEST = 00:40 UTC).
+    stopped = fsm.step(inputs(datetime(2026, 10, 25, 2, 0, tzinfo=cet), demand(0.0)))
+    assert stopped.reason is Reason.DEMAND_SATISFIED
+    assert not stopped.request_heat

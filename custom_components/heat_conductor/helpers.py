@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 from typing import Any
 
@@ -22,6 +22,22 @@ from .core.models import BoilerState, Reason
 _LOGGER = logging.getLogger(__name__)
 
 HEARTBEAT_TIMEOUT = 5
+
+
+def control_now() -> datetime:
+    """Local time with a fixed UTC offset: durations stay correct across DST changes.
+
+    Python subtracts two datetimes sharing one ZoneInfo by wall clock, so around a
+    clock change every timer of the engine would be off by an hour. A fixed offset
+    keeps the local calendar fields and makes subtraction exact.
+
+    Known trade-off: calendar arithmetic inside the engine (night window end, weekly
+    windows, next night: ``datetime.combine(now.date(), time(), tzinfo=now.tzinfo)``
+    plus an offset) uses the UTC offset valid now, so a boundary that lies beyond a
+    clock change is off by one hour on those two nights of the year.
+    """
+    now = dt_util.now()
+    return now.replace(tzinfo=timezone(now.utcoffset() or timedelta()))
 
 
 async def async_send_heartbeat(hass: HomeAssistant, url: str, armed: bool) -> bool:
