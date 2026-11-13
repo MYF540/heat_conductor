@@ -282,6 +282,13 @@ def arrival_expected(runtime: RoomRuntime, ctx: SetpointContext, params: Setpoin
     )
 
 
+def wake_preheat_wanted(runtime: RoomRuntime, ctx: SetpointContext, params: SetpointParams) -> bool:
+    """Whether the end of the night is worth heating for: somebody is or will be home."""
+    if ctx.present is not False:
+        return True
+    return ctx.predictive and arrival_expected(runtime, ctx, params)
+
+
 def room_active(runtime: RoomRuntime, ctx: SetpointContext, params: SetpointParams) -> bool | None:
     """Whether the room is in use. None without activity sensors or detection off."""
     if ctx.activity is None or not runtime.usage_enabled:
@@ -343,6 +350,7 @@ def compute_setpoint(
         # The night beats schedule and usage, but not the modes above.
         if (
             params.wake_preheat
+            and wake_preheat_wanted(runtime, ctx, params)
             and ctx.wake_at is not None
             and now >= ctx.wake_at - preheat_lead(runtime, ctx, params)
         ):

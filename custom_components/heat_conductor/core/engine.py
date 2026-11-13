@@ -40,6 +40,7 @@ from .setpoint import (
     compute_setpoint,
     plan_trv,
     preheat_lead,
+    wake_preheat_wanted,
 )
 from .sleep import SleepParams, SleepState, SleepTracker
 from .stats import DailyRuntime, RuntimeSnapshot
@@ -323,7 +324,14 @@ class HeatingEngine:
                 setpoints.append(setpoint)
                 periods[room.room_id] = (
                     *_comfort_period(
-                        setpoint, control, now, predictive, arrival_next, sleep.ends_at, night_next
+                        setpoint,
+                        control,
+                        now,
+                        predictive,
+                        arrival_next,
+                        # An empty home is not heated for the morning either.
+                        sleep.ends_at if wake_preheat_wanted(runtime, ctx, sp) else None,
+                        night_next,
                     ),
                     preheat_lead(runtime, ctx, sp),
                 )

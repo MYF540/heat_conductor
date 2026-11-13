@@ -113,6 +113,24 @@ def test_optimum_start_begins_early() -> None:
     assert compute_setpoint("r", runtime(), far, PARAMS).source is SetpointSource.SCHEDULE_ECO
 
 
+def test_wake_preheat_needs_somebody_home() -> None:
+    wake = {"sleeping": True, "wake_at": T0 + timedelta(minutes=30)}
+    home = compute_setpoint("r", runtime(), ctx(present=True, **wake), PARAMS)
+    assert home.source is SetpointSource.WAKE_PREHEAT
+    unknown = compute_setpoint("r", runtime(), ctx(present=None, **wake), PARAMS)
+    assert unknown.source is SetpointSource.WAKE_PREHEAT
+    empty = compute_setpoint("r", runtime(), ctx(present=False, **wake), PARAMS)
+    assert empty.source is SetpointSource.SLEEP
+    assert empty.target == 17.0
+    expected = compute_setpoint(
+        "r",
+        runtime(),
+        ctx(present=False, predictive=True, arrival_now=T0 - timedelta(minutes=10), **wake),
+        PARAMS,
+    )
+    assert expected.source is SetpointSource.WAKE_PREHEAT
+
+
 def test_changed_flag() -> None:
     rt = runtime()
     assert compute_setpoint("r", rt, ctx(), PARAMS).changed
