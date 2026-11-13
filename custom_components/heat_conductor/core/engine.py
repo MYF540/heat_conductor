@@ -47,6 +47,8 @@ from .stats import DailyRuntime, RuntimeSnapshot
 from .vacation import AutoVacation, VacationParams
 
 SOLAR_ACTIVE_RATIO = 0.4
+# Setpoints whose thermostat writes must not wait for the radio duty cycle.
+CLOSING_SOURCES = frozenset({SetpointSource.WINDOW, SetpointSource.ROOM_OFF})
 FORECAST_DROP = 3.0
 
 
@@ -289,7 +291,10 @@ class HeatingEngine:
         controls = {c.room_id: c for c in snap.room_controls}
         room_control_active = snap.room_control_enabled and snap.automation_enabled
         night_next = self._next_night(now) if not sleep.sleeping else None
-        masked = self.network.masked_rooms(now)
+        # An open valve counts as demand again only once the thermostat is restored.
+        masked = self.network.masked_rooms(now) | {
+            room_id for room_id, rt in self.room_runtime.items() if rt.co_heat_written
+        }
         setpoints: list[RoomSetpoint] = []
         periods: dict[str, tuple[datetime | None, datetime | None, timedelta]] = {}
         room_inputs: list[RoomInput] = []
@@ -542,7 +547,6 @@ class HeatingEngine:
         commands: list[TrvCommand] = []
         manual: list[str] = []
         co_heated = network.active_rooms() if network.executing else frozenset()
-        settling = self.network.masked_rooms(now)
         if room_control_active:
             for setpoint in setpoints:
                 control = controls[setpoint.room_id]
@@ -555,6 +559,12 @@ class HeatingEngine:
                 )
                 co_heat = setpoint.room_id in co_heated
                 toggled = co_heat != runtime.co_heat_written
+                # Closing writes must get through a high duty cycle: a thermostat left
+                # open heats on its own.
+                urgent = (
+                    runtime.co_heat_written and not co_heat
+                ) or setpoint.source in CLOSING_SOURCES
+                issued: set[str] = set()
                 for trv in control.trvs:
                     state = runtime.trvs.setdefault(trv.entity_id, TrvState())
                     if toggled:
@@ -570,15 +580,27 @@ class HeatingEngine:
                         now=now,
                         params=sp,
                         duty_cycle_ok=duty_cycle_ok,
-                        learn_offset=setpoint.room_id not in settling,
+                        learn_offset=setpoint.room_id not in masked,
+                        urgent=urgent,
                     )
                     if manual_temp is not None:
                         self.set_override(setpoint.room_id, now, manual_temp)
                         manual.append(setpoint.room_id)
                     if command is not None:
                         commands.append(command)
-                if duty_cycle_ok:
-                    runtime.co_heat_written = co_heat
+                        issued.add(command.entity_id)
+                if co_heat:
+                    if duty_cycle_ok:
+                        runtime.co_heat_written = True
+                elif runtime.co_heat_written and all(
+                    not trv.available
+                    or trv.current_target is None
+                    or trv.entity_id in issued
+                    or abs(trv.current_target - np_.opening_temperature) >= 0.25
+                    for trv in control.trvs
+                ):
+                    # Restored, or the thermostats do not hold the opening temperature.
+                    runtime.co_heat_written = False
         elif duty_cycle_ok:
             # Without room control the thermostats get back what they had before.
             for setpoint in setpoints:

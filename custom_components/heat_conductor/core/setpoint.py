@@ -424,11 +424,13 @@ def plan_trv(
     params: SetpointParams,
     duty_cycle_ok: bool,
     learn_offset: bool = True,
+    urgent: bool = False,
 ) -> tuple[TrvCommand | None, float | None]:
     """Decide whether to write a thermostat.
 
     Returns (command, manual_temperature). manual_temperature is set when the
-    thermostat was changed by hand and should become a room override.
+    thermostat was changed by hand and should become a room override. An urgent
+    write (closing a window, ending a co-heat) is not held back by the duty cycle.
     """
     if not trv.available or trv.current_target is None:
         return None, None
@@ -486,7 +488,7 @@ def plan_trv(
             state.last_written = trv.current_target
             state.last_write_at = now
         return None, None
-    if not duty_cycle_ok:
+    if not duty_cycle_ok and not urgent:
         return None, None
     lost_write = after_grace and trv.current_target == previous_seen
     due = (

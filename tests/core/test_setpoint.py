@@ -224,6 +224,24 @@ def test_duty_cycle_blocks_writes() -> None:
     assert command is None
 
 
+def test_urgent_write_ignores_the_duty_cycle() -> None:
+    command, _ = plan_trv(
+        TrvState(),
+        trv(target=25.0),
+        target=21.0,
+        target_changed=True,
+        source=SetpointSource.SCHEDULE_COMFORT,
+        room_temperature=None,
+        compensation=False,
+        now=T0,
+        params=PARAMS,
+        duty_cycle_ok=False,
+        urgent=True,
+    )
+    assert command is not None
+    assert command.temperature == 21.0
+
+
 def test_manual_change_at_thermostat_becomes_override() -> None:
     state = TrvState(last_written=21.0, last_write_at=T0, last_seen=21.0)
     command, manual = plan_trv(
