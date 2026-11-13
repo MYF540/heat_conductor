@@ -257,6 +257,7 @@ HeatConductor entscheidet deshalb über **Beginn und Ende der Freigaben**:
 | Regel | Wirkung |
 |---|---|
 | Start-/Stopp-Schwelle, Bestätigungszeit | Freigabe nur bei echtem Bedarf aller Räume |
+| **Anhaltendes Raumdefizit** | Bleibt ein einzelner Raum 45 min lang mindestens 0,5 K unter Soll, startet die Freigabe auch dann, wenn der Gesamtbedarf unter der Start-Schwelle liegt. Beide Werte sind einstellbar, Dauer 0 schaltet die Regel ab. |
 | Mindest-Freigabedauer, Pause, max. Freigaben pro Stunde | wenige, dafür sinnvolle Freigaben |
 | **Laufenden Brenner nicht abschalten** | Soll die Freigabe enden, während der Brenner brennt, wird das Ende des Brennerlaufs abgewartet (höchstens 30 min). Ein abgebrochener Brennerlauf kostet einen Start ohne Nutzen. |
 | **Nach dem Brennerlauf bei geringem Bedarf beenden** | Endet ein Brennerlauf und liegt der Bedarf unter der Start-Schwelle, endet auch die Freigabe. Sonst zündet der Kessel nach seiner Sperrzeit für einen Rest-Bedarf erneut. |
