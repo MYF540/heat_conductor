@@ -99,6 +99,9 @@ class TrvState:
     offset_at: datetime | None = None
     # Target the thermostat had before co-heating opened it (restored without room control).
     restore_target: float | None = None
+    # Target the thermostat showed at the previous evaluation (tells a hand change
+    # from a write that never arrived).
+    last_seen: float | None = None
 
 
 @dataclass(slots=True)
@@ -143,6 +146,7 @@ class RoomRuntime:
                     "offset": s.offset,
                     "offset_at": _iso(s.offset_at),
                     "restore_target": s.restore_target,
+                    "last_seen": s.last_seen,
                 }
                 for entity_id, s in self.trvs.items()
             },
@@ -171,6 +175,7 @@ class RoomRuntime:
                 offset=_float(trv.get("offset"), None),
                 offset_at=_parse(trv.get("offset_at")),
                 restore_target=_float(trv.get("restore_target"), None),
+                last_seen=_float(trv.get("last_seen"), None),
             )
         return runtime
 
@@ -419,6 +424,8 @@ def plan_trv(
     """
     if not trv.available or trv.current_target is None:
         return None, None
+    previous_seen = state.last_seen
+    state.last_seen = trv.current_target
 
     # A thermostat on a radiator opened by the heat network reads far too warm.
     if (
@@ -443,14 +450,21 @@ def plan_trv(
     # A hand change is recognised even when our own target changes at the same time:
     # whoever turns the knob stands in the room and usually trips its activity sensor.
     # The grace only covers the lag of our own writes, so an adoption does not restart
-    # it and further steps of the same turn are taken over as well.
-    if (
-        params.adopt_trv_changes
-        and source is not SetpointSource.WINDOW
-        and state.last_written is not None
+    # it and further steps of the same turn are taken over as well. Only a thermostat
+    # target that moved since the last evaluation is a hand change: one that still
+    # shows its old value never took our write, which is rewritten below.
+    after_grace = (
+        state.last_written is not None
         and state.last_write_at is not None
         and now - state.last_write_at > MANUAL_CHANGE_GRACE
         and abs(trv.current_target - state.last_written) >= 0.5
+    )
+    if (
+        params.adopt_trv_changes
+        and source is not SetpointSource.WINDOW
+        and after_grace
+        and previous_seen is not None
+        and trv.current_target != previous_seen
         and trv.current_target > params.window_temp + 0.25
     ):
         state.last_written = trv.current_target
@@ -466,9 +480,11 @@ def plan_trv(
         return None, None
     if not duty_cycle_ok:
         return None, None
+    lost_write = after_grace and trv.current_target == previous_seen
     due = (
         target_changed
         or needs_heat_mode
+        or lost_write
         or state.last_write_at is None
         or now - state.last_write_at >= params.write_interval
     )
