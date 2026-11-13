@@ -98,6 +98,26 @@ def test_getting_up_ends_the_night_inside_the_window() -> None:
     assert awake.sensor_sleeping is False
 
 
+def test_awake_in_the_evening_does_not_cancel_the_window() -> None:
+    """Nobody went to bed yet: the window applies even though the sensor says awake."""
+    tracker = SleepTracker()
+    _run(tracker, at(21.0), sensor=False, minutes=60)
+    assert tracker.sensor_sleeping is False
+    evening = _run(tracker, at(23.5), sensor=False, minutes=10)
+    assert evening.sleeping
+    assert evening.source is SleepSource.WINDOW
+
+
+def test_awake_flag_survives_a_restart() -> None:
+    tracker = SleepTracker()
+    _run(tracker, at(23.0), sensor=True, minutes=30)
+    restored = SleepTracker()
+    restored.restore(tracker.to_dict())
+    # The sensor reads awake right after the restart; it slept earlier this night.
+    state = _run(restored, at(5.5, 1), sensor=False, minutes=20)
+    assert not state.sleeping
+
+
 def test_night_trip_does_not_end_the_setback() -> None:
     """A few minutes out of bed keep the night running."""
     tracker = SleepTracker()
