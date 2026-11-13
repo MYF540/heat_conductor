@@ -64,6 +64,8 @@ CONF_START_THRESHOLD: Final = "start_threshold"
 CONF_START_CONFIRM: Final = "start_confirm"
 CONF_STOP_THRESHOLD: Final = "stop_threshold"
 CONF_IMMEDIATE_DEFICIT: Final = "immediate_start_deficit"
+CONF_PERSISTENT_DEFICIT: Final = "persistent_deficit"
+CONF_PERSISTENT_DEFICIT_TIME: Final = "persistent_deficit_time"
 CONF_DEFICIT_FULL_SCALE: Final = "deficit_full_scale"
 CONF_MIN_RUN: Final = "min_run"
 CONF_MIN_PAUSE: Final = "min_pause"
@@ -84,6 +86,8 @@ PARAMETER_DEFAULTS: Final[dict[str, float]] = {
     CONF_START_CONFIRM: 5,  # min
     CONF_STOP_THRESHOLD: 10,  # %
     CONF_IMMEDIATE_DEFICIT: 1.0,  # K
+    CONF_PERSISTENT_DEFICIT: 0.5,  # K
+    CONF_PERSISTENT_DEFICIT_TIME: 45,  # min, 0 = off
     CONF_DEFICIT_FULL_SCALE: 1.0,  # K
     CONF_MIN_RUN: 20,  # min
     CONF_MIN_PAUSE: 15,  # min

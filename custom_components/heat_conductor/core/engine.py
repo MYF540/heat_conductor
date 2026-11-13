@@ -175,6 +175,10 @@ class HeatingEngine:
         self.energy = EnergyTracker(energy_params or EnergyParams())
         self.room_runtime: dict[str, RoomRuntime] = {}
         self.learner = Learner()
+        # Per room: since when the deficit stays above the limit, and who is starving.
+        # Not persisted: a restart simply restarts the timers.
+        self._deficit_since: dict[str, datetime] = {}
+        self._starving: set[str] = set()
 
     # -- parameters and room settings --------------------------------------
 
@@ -357,8 +361,10 @@ class HeatingEngine:
             )
 
         rooms = tuple(evaluate_room(room, now, p) for room in room_inputs)
-        demand = summarize(rooms)
         by_id = {r.room_id: r for r in room_inputs}
+        demand = replace(
+            summarize(rooms), persistent_deficit=self._track_deficits(now, rooms, by_id)
+        )
 
         # Heat network: forecast every room, then decide whether a start should wait.
         np_ = self.network_params
@@ -665,6 +671,42 @@ class HeatingEngine:
         )
 
     # -- heat network ---------------------------------------------------------
+
+    def _track_deficits(
+        self, now: datetime, rooms: tuple[RoomDemand, ...], by_id: dict[str, RoomInput]
+    ) -> bool:
+        """Follow how long each room stays too cold; True while one is starving."""
+        p = self.params
+        limit = p.persistent_deficit
+        if p.persistent_deficit_time <= timedelta(0):
+            self._deficit_since.clear()
+            self._starving.clear()
+            return False
+        eligible: set[str] = set()
+        for room in rooms:
+            if (
+                room.kind is RoomKind.REGULATED
+                and room.demand is not None
+                and room.weight > 0
+                and room.status is not RoomStatus.WINDOW_OPEN
+                and not by_id[room.room_id].solar_active
+                and room.deficit is not None
+            ):
+                eligible.add(room.room_id)
+                deficit = room.deficit
+                if deficit >= limit:
+                    since = self._deficit_since.setdefault(room.room_id, now)
+                    if now - since >= p.persistent_deficit_time:
+                        self._starving.add(room.room_id)
+                elif room.room_id in self._starving and deficit >= limit / 2:
+                    continue  # hysteresis: stays starving until it is clearly warmer
+                else:
+                    self._deficit_since.pop(room.room_id, None)
+                    self._starving.discard(room.room_id)
+        for room_id in set(self._deficit_since) - eligible:
+            del self._deficit_since[room_id]
+        self._starving &= eligible
+        return bool(self._starving)
 
     def _next_night(self, now: datetime) -> datetime | None:
         """Start of the next night, from the manual window or the learned night."""

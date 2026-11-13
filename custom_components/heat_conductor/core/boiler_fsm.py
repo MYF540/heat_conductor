@@ -184,7 +184,10 @@ class BoilerController:
             return self._stop(now, BoilerState.SUMMER, Reason.SUMMER_MODE)
 
         total = demand.total
-        immediate = (demand.max_deficit or 0.0) >= p.immediate_start_deficit
+        deficit_start = (demand.max_deficit or 0.0) >= p.immediate_start_deficit
+        # A room that stays cold for long counts like a large deficit: its share of the
+        # mean demand is too small to start (or keep) a release on its own.
+        immediate = deficit_start or demand.persistent_deficit
 
         if self.is_on:
             self._demand_since = None
@@ -232,9 +235,13 @@ class BoilerController:
                 return self._decide(
                     BoilerState.OFF, Reason.BUNDLING, remaining=inp.bundle_wait - waited
                 )
-        return self._start(
-            now, BoilerState.HEATING, Reason.DEFICIT_START if immediate else Reason.DEMAND_START
-        )
+        if deficit_start:
+            reason = Reason.DEFICIT_START
+        elif immediate:
+            reason = Reason.PERSISTENT_DEFICIT
+        else:
+            reason = Reason.DEMAND_START
+        return self._start(now, BoilerState.HEATING, reason)
 
     # -- helpers -----------------------------------------------------------
 
