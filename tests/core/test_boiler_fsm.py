@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 
 from custom_components.heat_conductor.core.boiler_fsm import BoilerController, BoilerInputs
 from custom_components.heat_conductor.core.demand import DemandSummary
@@ -291,3 +292,70 @@ def test_state_roundtrip() -> None:
     assert restored.is_on
     assert restored.on_since == minutes(0)
     assert len(restored.starts) == 1
+
+
+def test_persistent_deficit_starts_below_start_threshold() -> None:
+    fsm = BoilerController(PARAMS)
+    decision = fsm.step(inputs(minutes(0), demand(0.17, max_deficit=0.9, persistent_deficit=True)))
+    assert decision.reason is Reason.PERSISTENT_DEFICIT
+    assert decision.request_heat
+
+
+def test_classic_deficit_keeps_its_reason_with_persistent_flag() -> None:
+    fsm = BoilerController(PARAMS)
+    decision = fsm.step(inputs(minutes(0), demand(0.17, max_deficit=1.5, persistent_deficit=True)))
+    assert decision.reason is Reason.DEFICIT_START
+
+
+def test_persistent_deficit_keeps_the_release_running() -> None:
+    fsm = BoilerController(PARAMS)
+    starving = demand(0.05, max_deficit=0.9, persistent_deficit=True)
+    assert fsm.step(inputs(minutes(0), starving)).request_heat
+    # Neither the stop threshold nor a finished burner cycle ends it while a room starves.
+    assert fsm.step(inputs(minutes(30), starving)).request_heat
+    ended = fsm.step(inputs(minutes(40), demand(0.05, max_deficit=0.3)))
+    assert ended.reason is Reason.DEMAND_SATISFIED
+
+
+def test_persistent_deficit_ignores_burner_cycle_end() -> None:
+    def step(m: float, starving: DemandSummary, relay: bool, burner: bool):
+        base = inputs(minutes(m), starving, actuator=True, relay=relay)
+        return fsm.step(replace(base, burner_on=burner))
+
+    fsm = BoilerController(PARAMS)
+    starving = demand(0.17, max_deficit=0.9, persistent_deficit=True)
+    assert step(0, starving, False, False).request_heat
+    fsm.note_command(True)
+    step(1, starving, True, True)
+    # The burner cycle is over and the demand is below the start threshold.
+    held = step(30, starving, True, False)
+    assert held.reason is Reason.DEMAND_CONTINUES
+    done = step(31, demand(0.17, max_deficit=0.3), True, False)
+    assert done.reason is Reason.BURNER_CYCLE_DONE
+
+
+def test_persistent_deficit_respects_min_pause() -> None:
+    fsm = BoilerController(PARAMS)
+    fsm.step(inputs(minutes(0), demand(0.2, max_deficit=1.2)))
+    assert not fsm.step(inputs(minutes(20), demand(0.0))).request_heat
+    starving = demand(0.17, max_deficit=0.9, persistent_deficit=True)
+    waiting = fsm.step(inputs(minutes(25), starving))
+    assert waiting.reason is Reason.WAITING_MIN_PAUSE
+    assert not waiting.request_heat
+    assert fsm.step(inputs(minutes(35), starving)).reason is Reason.PERSISTENT_DEFICIT
+
+
+def test_min_runtime_counts_real_time_across_a_clock_change() -> None:
+    """Fixed-offset local times (as the HA layer hands them in) stay exact."""
+    cest = timezone(timedelta(hours=2))
+    cet = timezone(timedelta(hours=1))
+    fsm = BoilerController(PARAMS)
+    fsm.step(inputs(datetime(2026, 10, 25, 2, 40, tzinfo=cest), demand(0.2, max_deficit=1.2)))
+    # 02:50 CEST, 10 real minutes in: held for the 10 that remain.
+    held = fsm.step(inputs(datetime(2026, 10, 25, 2, 50, tzinfo=cest), demand(0.0)))
+    assert held.reason is Reason.MIN_RUNTIME
+    assert held.remaining == timedelta(minutes=10)
+    # 02:00 CET is 20 real minutes in (02:40 CEST = 00:40 UTC).
+    stopped = fsm.step(inputs(datetime(2026, 10, 25, 2, 0, tzinfo=cet), demand(0.0)))
+    assert stopped.reason is Reason.DEMAND_SATISFIED
+    assert not stopped.request_heat

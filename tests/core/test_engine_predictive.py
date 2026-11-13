@@ -158,3 +158,10 @@ def test_warm_up_before_the_night_ends() -> None:
     assert morning.sleep.sleeping  # still night for learning and the entity
     later = engine.evaluate(replace(snapshot(at(7.0), present=True)))
     assert later.setpoint("bad").source is SetpointSource.PRESENT
+
+
+def test_no_warm_up_before_the_night_ends_in_an_empty_home() -> None:
+    """Nobody home: the night stays eco until the window ends."""
+    engine = trained(sleep_params=SleepParams(window_start=23 * 60, window_end=6 * 60 + 30))
+    morning = engine.evaluate(snapshot(at(5.75), present=False))
+    assert morning.setpoint("bad").source is SetpointSource.SLEEP

@@ -58,6 +58,7 @@ class Reason(StrEnum):
     WAITING_MAX_STARTS = "waiting_max_starts"
     DEMAND_START = "demand_start"
     DEFICIT_START = "deficit_start"
+    PERSISTENT_DEFICIT = "persistent_deficit"
     DEMAND_CONTINUES = "demand_continues"
     MIN_RUNTIME = "min_runtime"
     DEMAND_SATISFIED = "demand_satisfied"
@@ -104,6 +105,10 @@ class ControlParams:
     start_confirm: timedelta = timedelta(minutes=5)
     stop_threshold: float = 0.10
     immediate_start_deficit: float = 1.0
+    # A single cold room barely moves the mean demand: it starts after staying this cold
+    # for this long. A time of 0 switches the feature off.
+    persistent_deficit: float = 0.5
+    persistent_deficit_time: timedelta = timedelta(minutes=45)
     deficit_full_scale: float = 1.0
     valve_noise: float = 0.05
     min_run: timedelta = timedelta(minutes=20)

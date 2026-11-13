@@ -96,6 +96,8 @@ class SleepTracker:
         self.since: datetime | None = None
         self._on_since: datetime | None = None
         self._off_since: datetime | None = None
+        # The sensor confirmed sleep earlier in this night, so awake means getting up.
+        self.slept = False
 
     def update(
         self, now: datetime, sensor: bool | None, pattern: NightPattern, params: SleepParams
@@ -103,7 +105,10 @@ class SleepTracker:
         """Advance the timers and decide whether the home sleeps."""
         self._update_sensor(now, sensor, params)
 
-        awake = sensor is not None and self.sensor_sleeping is False
+        if self.sensor_sleeping:
+            self.slept = True
+        # Awake only ends the night after it slept; in the evening nobody went to bed yet.
+        awake = sensor is not None and self.sensor_sleeping is False and self.slept
         learned = params.use_learned and pattern.ready and bool(pattern.schedule_state(now)[0])
         source = SleepSource.NONE
         if self.sensor_sleeping:
@@ -116,6 +121,8 @@ class SleepTracker:
         elif learned:
             source = SleepSource.LEARNED
 
+        if not self.sensor_sleeping and not params.in_window(now) and not learned:
+            self.slept = False  # the night is over
         sleeping = source is not SleepSource.NONE
         if not sleeping:
             self.since = None
@@ -157,6 +164,7 @@ class SleepTracker:
         """Serialize."""
         return {
             "sensor_sleeping": self.sensor_sleeping,
+            "slept": self.slept,
             "since": self.since.isoformat() if self.since else None,
         }
 
@@ -166,6 +174,7 @@ class SleepTracker:
             return
         value = data.get("sensor_sleeping")
         self.sensor_sleeping = value if isinstance(value, bool) else None
+        self.slept = data.get("slept") is True
         since = data.get("since")
         if isinstance(since, str):
             try:

@@ -50,6 +50,7 @@ def demand(
     *,
     max_deficit: float | None = 0.0,
     min_temperature: float | None = 20.0,
+    persistent_deficit: bool = False,
 ) -> DemandSummary:
     """Build a demand summary."""
     return DemandSummary(
@@ -59,4 +60,5 @@ def demand(
         rooms_valid=1 if total is not None else 0,
         rooms_regulated=1,
         top_rooms=(),
+        persistent_deficit=persistent_deficit,
     )

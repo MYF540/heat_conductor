@@ -55,6 +55,8 @@ class DemandSummary:
     rooms_valid: int
     rooms_regulated: int
     top_rooms: tuple[str, ...]
+    # A room has been too cold for long (set by the engine, which tracks the time).
+    persistent_deficit: bool = False
 
 
 def _mean(values: list[float]) -> float | None:

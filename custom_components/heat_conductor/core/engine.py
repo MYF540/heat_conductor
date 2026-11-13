@@ -40,12 +40,15 @@ from .setpoint import (
     compute_setpoint,
     plan_trv,
     preheat_lead,
+    wake_preheat_wanted,
 )
 from .sleep import SleepParams, SleepState, SleepTracker
 from .stats import DailyRuntime, RuntimeSnapshot
 from .vacation import AutoVacation, VacationParams
 
 SOLAR_ACTIVE_RATIO = 0.4
+# Setpoints whose thermostat writes must not wait for the radio duty cycle.
+CLOSING_SOURCES = frozenset({SetpointSource.WINDOW, SetpointSource.ROOM_OFF})
 FORECAST_DROP = 3.0
 
 
@@ -172,6 +175,10 @@ class HeatingEngine:
         self.energy = EnergyTracker(energy_params or EnergyParams())
         self.room_runtime: dict[str, RoomRuntime] = {}
         self.learner = Learner()
+        # Per room: since when the deficit stays above the limit, and who is starving.
+        # Not persisted: a restart simply restarts the timers.
+        self._deficit_since: dict[str, datetime] = {}
+        self._starving: set[str] = set()
 
     # -- parameters and room settings --------------------------------------
 
@@ -288,7 +295,10 @@ class HeatingEngine:
         controls = {c.room_id: c for c in snap.room_controls}
         room_control_active = snap.room_control_enabled and snap.automation_enabled
         night_next = self._next_night(now) if not sleep.sleeping else None
-        masked = self.network.masked_rooms(now)
+        # An open valve counts as demand again only once the thermostat is restored.
+        masked = self.network.masked_rooms(now) | {
+            room_id for room_id, rt in self.room_runtime.items() if rt.co_heat_written
+        }
         setpoints: list[RoomSetpoint] = []
         periods: dict[str, tuple[datetime | None, datetime | None, timedelta]] = {}
         room_inputs: list[RoomInput] = []
@@ -323,7 +333,14 @@ class HeatingEngine:
                 setpoints.append(setpoint)
                 periods[room.room_id] = (
                     *_comfort_period(
-                        setpoint, control, now, predictive, arrival_next, sleep.ends_at, night_next
+                        setpoint,
+                        control,
+                        now,
+                        predictive,
+                        arrival_next,
+                        # An empty home is not heated for the morning either.
+                        sleep.ends_at if wake_preheat_wanted(runtime, ctx, sp) else None,
+                        night_next,
                     ),
                     preheat_lead(runtime, ctx, sp),
                 )
@@ -344,8 +361,10 @@ class HeatingEngine:
             )
 
         rooms = tuple(evaluate_room(room, now, p) for room in room_inputs)
-        demand = summarize(rooms)
         by_id = {r.room_id: r for r in room_inputs}
+        demand = replace(
+            summarize(rooms), persistent_deficit=self._track_deficits(now, rooms, by_id)
+        )
 
         # Heat network: forecast every room, then decide whether a start should wait.
         np_ = self.network_params
@@ -488,6 +507,14 @@ class HeatingEngine:
             if burner is not None
             else (decision.request_heat if snap.actuator_active else None)
         )
+        # The rooms learn from delivered heat, not from the flame: inside a release the
+        # burner pauses for its lock time while the radiators keep heating.
+        if snap.pump_on is not None:
+            room_heating: bool | None = snap.pump_on
+        elif snap.actuator_active:
+            room_heating = snap.relay_on if snap.relay_on is not None else decision.request_heat
+        else:
+            room_heating = heating
         for room in rooms:
             if room.kind is not RoomKind.REGULATED:
                 continue
@@ -496,7 +523,7 @@ class HeatingEngine:
                 temperature=room.temperature,
                 outdoor=outdoor.value,
                 valve=room.valve,
-                heating=heating,
+                heating=room_heating,
                 window_open=room.status is RoomStatus.WINDOW_OPEN,
             )
         self.learner.boiler.update(now, burner, outdoor.value)
@@ -534,7 +561,6 @@ class HeatingEngine:
         commands: list[TrvCommand] = []
         manual: list[str] = []
         co_heated = network.active_rooms() if network.executing else frozenset()
-        settling = self.network.masked_rooms(now)
         if room_control_active:
             for setpoint in setpoints:
                 control = controls[setpoint.room_id]
@@ -547,6 +573,21 @@ class HeatingEngine:
                 )
                 co_heat = setpoint.room_id in co_heated
                 toggled = co_heat != runtime.co_heat_written
+                # Closing writes must get through a high duty cycle: a thermostat left
+                # open heats on its own.
+                # A thermostat still on the opening temperature lost its restoring write.
+                left_open = not co_heat and any(
+                    trv.current_target is not None
+                    and abs(trv.current_target - np_.opening_temperature) < 0.25
+                    and setpoint.target < trv.current_target - 0.25
+                    for trv in control.trvs
+                )
+                urgent = (
+                    (runtime.co_heat_written and not co_heat)
+                    or left_open
+                    or setpoint.source in CLOSING_SOURCES
+                )
+                issued: set[str] = set()
                 for trv in control.trvs:
                     state = runtime.trvs.setdefault(trv.entity_id, TrvState())
                     if toggled:
@@ -562,17 +603,30 @@ class HeatingEngine:
                         now=now,
                         params=sp,
                         duty_cycle_ok=duty_cycle_ok,
-                        learn_offset=setpoint.room_id not in settling,
+                        learn_offset=setpoint.room_id not in masked,
+                        urgent=urgent,
                     )
                     if manual_temp is not None:
                         self.set_override(setpoint.room_id, now, manual_temp)
                         manual.append(setpoint.room_id)
                     if command is not None:
                         commands.append(command)
-                if duty_cycle_ok:
-                    runtime.co_heat_written = co_heat
-        elif duty_cycle_ok:
-            # Without room control the thermostats get back what they had before.
+                        issued.add(command.entity_id)
+                if co_heat:
+                    if duty_cycle_ok:
+                        runtime.co_heat_written = True
+                elif runtime.co_heat_written and all(
+                    not trv.available
+                    or trv.current_target is None
+                    or trv.entity_id in issued
+                    or abs(trv.current_target - np_.opening_temperature) >= 0.25
+                    for trv in control.trvs
+                ):
+                    # Restored, or the thermostats do not hold the opening temperature.
+                    runtime.co_heat_written = False
+        else:
+            # Without room control the thermostats get back what they had before,
+            # whatever the duty cycle says: an open thermostat heats on its own.
             for setpoint in setpoints:
                 runtime = self.runtime(setpoint.room_id)
                 if not runtime.co_heat_written:
@@ -625,6 +679,42 @@ class HeatingEngine:
         )
 
     # -- heat network ---------------------------------------------------------
+
+    def _track_deficits(
+        self, now: datetime, rooms: tuple[RoomDemand, ...], by_id: dict[str, RoomInput]
+    ) -> bool:
+        """Follow how long each room stays too cold; True while one is starving."""
+        p = self.params
+        limit = p.persistent_deficit
+        if p.persistent_deficit_time <= timedelta(0):
+            self._deficit_since.clear()
+            self._starving.clear()
+            return False
+        eligible: set[str] = set()
+        for room in rooms:
+            if (
+                room.kind is RoomKind.REGULATED
+                and room.demand is not None
+                and room.weight > 0
+                and room.status is not RoomStatus.WINDOW_OPEN
+                and not by_id[room.room_id].solar_active
+                and room.deficit is not None
+            ):
+                eligible.add(room.room_id)
+                deficit = room.deficit
+                if deficit >= limit:
+                    since = self._deficit_since.setdefault(room.room_id, now)
+                    if now - since >= p.persistent_deficit_time:
+                        self._starving.add(room.room_id)
+                elif room.room_id in self._starving and deficit >= limit / 2:
+                    continue  # hysteresis: stays starving until it is clearly warmer
+                else:
+                    self._deficit_since.pop(room.room_id, None)
+                    self._starving.discard(room.room_id)
+        for room_id in set(self._deficit_since) - eligible:
+            del self._deficit_since[room_id]
+        self._starving &= eligible
+        return bool(self._starving)
 
     def _next_night(self, now: datetime) -> datetime | None:
         """Start of the next night, from the manual window or the learned night."""

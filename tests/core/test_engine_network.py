@@ -9,9 +9,9 @@ from custom_components.heat_conductor.core.engine import (
     HeatingEngine,
     RoomControlInput,
 )
-from custom_components.heat_conductor.core.models import ControlParams, OperatingMode
+from custom_components.heat_conductor.core.models import ControlParams, OperatingMode, Reading
 from custom_components.heat_conductor.core.network import NetworkParams, NetworkPhase
-from custom_components.heat_conductor.core.setpoint import TrvInput
+from custom_components.heat_conductor.core.setpoint import TrvInput, TrvState
 
 from .helpers import T0, fresh, room
 
@@ -29,6 +29,7 @@ def snapshot(
     room_control: bool = True,
     actuator: bool = True,
     relay_on: bool = True,
+    duty: float | None = None,
 ) -> EngineSnapshot:
     """Bad is cold and starts a release, Wohnzimmer is at its target."""
     return EngineSnapshot(
@@ -60,6 +61,7 @@ def snapshot(
         actuator_active=actuator,
         room_control_enabled=room_control,
         network_enabled=network,
+        duty_cycle=Reading(duty, now) if duty is not None else None,
         room_controls=(
             RoomControlInput(
                 room_id="bad",
@@ -160,3 +162,42 @@ def test_excluded_room_is_never_co_heated() -> None:
     result = engine.evaluate(snapshot(T0))
     assert "wohnzimmer" not in result.network.active_rooms()
     assert writes(result, "climate.wohnzimmer") == []
+
+
+def test_co_heat_ends_even_when_the_duty_cycle_is_over_the_limit() -> None:
+    """A thermostat left on the opening temperature would start the boiler by itself."""
+    engine = HeatingEngine(ControlParams())
+    engine.runtime("wohnzimmer").co_heat_written = True
+    engine.runtime("wohnzimmer").trvs["climate.wohnzimmer"] = TrvState(
+        last_written=OPEN, last_write_at=T0 - timedelta(minutes=30)
+    )
+    result = engine.evaluate(
+        snapshot(
+            T0,
+            bad=21.5,
+            wohnzimmer_trv=OPEN,
+            wohnzimmer_valve=1.0,
+            relay_on=False,
+            duty=85.0,
+        )
+    )
+    assert not result.duty_cycle_ok
+    assert writes(result, "climate.wohnzimmer") == [21.0]
+    assert not engine.runtime("wohnzimmer").co_heat_written
+
+
+def test_co_heat_stays_marked_until_the_thermostat_is_restored() -> None:
+    """Without a restoring write the open valve must not start the boiler."""
+    engine = HeatingEngine(ControlParams())
+    runtime = engine.runtime("wohnzimmer")
+    runtime.co_heat_written = True
+    # Somebody turned the knob to the opening temperature: adopted, nothing is written.
+    state = TrvState(last_written=21.0, last_write_at=T0, last_seen=21.0)
+    runtime.trvs["climate.wohnzimmer"] = state
+    late = T0 + timedelta(minutes=40)  # the valve mask of a normal end ran out long ago
+    result = engine.evaluate(
+        snapshot(late, bad=21.5, wohnzimmer_trv=OPEN, wohnzimmer_valve=1.0, relay_on=False)
+    )
+    assert writes(result, "climate.wohnzimmer") == []
+    assert engine.runtime("wohnzimmer").co_heat_written
+    assert result.room("wohnzimmer").demand == 0.0  # still masked

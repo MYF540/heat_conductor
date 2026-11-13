@@ -113,6 +113,24 @@ def test_optimum_start_begins_early() -> None:
     assert compute_setpoint("r", runtime(), far, PARAMS).source is SetpointSource.SCHEDULE_ECO
 
 
+def test_wake_preheat_needs_somebody_home() -> None:
+    wake = {"sleeping": True, "wake_at": T0 + timedelta(minutes=30)}
+    home = compute_setpoint("r", runtime(), ctx(present=True, **wake), PARAMS)
+    assert home.source is SetpointSource.WAKE_PREHEAT
+    unknown = compute_setpoint("r", runtime(), ctx(present=None, **wake), PARAMS)
+    assert unknown.source is SetpointSource.WAKE_PREHEAT
+    empty = compute_setpoint("r", runtime(), ctx(present=False, **wake), PARAMS)
+    assert empty.source is SetpointSource.SLEEP
+    assert empty.target == 17.0
+    expected = compute_setpoint(
+        "r",
+        runtime(),
+        ctx(present=False, predictive=True, arrival_now=T0 - timedelta(minutes=10), **wake),
+        PARAMS,
+    )
+    assert expected.source is SetpointSource.WAKE_PREHEAT
+
+
 def test_changed_flag() -> None:
     rt = runtime()
     assert compute_setpoint("r", rt, ctx(), PARAMS).changed
@@ -206,8 +224,26 @@ def test_duty_cycle_blocks_writes() -> None:
     assert command is None
 
 
+def test_urgent_write_ignores_the_duty_cycle() -> None:
+    command, _ = plan_trv(
+        TrvState(),
+        trv(target=25.0),
+        target=21.0,
+        target_changed=True,
+        source=SetpointSource.SCHEDULE_COMFORT,
+        room_temperature=None,
+        compensation=False,
+        now=T0,
+        params=PARAMS,
+        duty_cycle_ok=False,
+        urgent=True,
+    )
+    assert command is not None
+    assert command.temperature == 21.0
+
+
 def test_manual_change_at_thermostat_becomes_override() -> None:
-    state = TrvState(last_written=21.0, last_write_at=T0)
+    state = TrvState(last_written=21.0, last_write_at=T0, last_seen=21.0)
     command, manual = plan_trv(
         state,
         trv(target=23.0),
@@ -226,7 +262,7 @@ def test_manual_change_at_thermostat_becomes_override() -> None:
 
 def test_manual_change_is_adopted_while_the_target_changes() -> None:
     # Standing at the thermostat trips the room's activity sensor in the same run.
-    state = TrvState(last_written=21.0, last_write_at=T0)
+    state = TrvState(last_written=21.0, last_write_at=T0, last_seen=21.0)
     command, manual = plan_trv(
         state,
         trv(target=23.0),
@@ -244,7 +280,7 @@ def test_manual_change_is_adopted_while_the_target_changes() -> None:
 
 
 def test_every_step_of_a_turn_at_the_thermostat_is_adopted() -> None:
-    state = TrvState(last_written=21.0, last_write_at=T0)
+    state = TrvState(last_written=21.0, last_write_at=T0, last_seen=21.0)
     later = T0 + timedelta(minutes=10)
     for step in (21.5, 22.0, 22.5, 23.0):
         later += timedelta(seconds=5)
@@ -281,8 +317,66 @@ def test_own_write_lag_is_not_manual() -> None:
     assert manual is None
 
 
+def test_lost_write_is_rewritten_instead_of_adopted() -> None:
+    # The thermostat never took our 21; its old 18 must not become a room override.
+    state = TrvState(last_written=21.0, last_write_at=T0, last_seen=18.0)
+    command, manual = plan_trv(
+        state,
+        trv(target=18.0),
+        target=21.0,
+        target_changed=False,
+        source=SetpointSource.SCHEDULE_COMFORT,
+        room_temperature=None,
+        compensation=False,
+        now=T0 + timedelta(minutes=4),
+        params=PARAMS,
+        duty_cycle_ok=True,
+    )
+    assert manual is None
+    assert command is not None
+    assert command.temperature == 21.0
+
+
+def test_lost_write_waits_for_the_grace_and_the_duty_cycle() -> None:
+    kwargs = {
+        "target": 21.0,
+        "target_changed": False,
+        "source": SetpointSource.SCHEDULE_COMFORT,
+        "room_temperature": None,
+        "compensation": False,
+        "params": PARAMS,
+    }
+    state = TrvState(last_written=21.0, last_write_at=T0, last_seen=18.0)
+    command, manual = plan_trv(
+        state, trv(target=18.0), now=T0 + timedelta(minutes=1), duty_cycle_ok=True, **kwargs
+    )
+    assert (command, manual) == (None, None)
+    command, manual = plan_trv(
+        state, trv(target=18.0), now=T0 + timedelta(minutes=4), duty_cycle_ok=False, **kwargs
+    )
+    assert (command, manual) == (None, None)
+
+
+def test_late_arrival_of_our_own_write_is_not_manual() -> None:
+    state = TrvState(last_written=21.0, last_write_at=T0, last_seen=18.0)
+    command, manual = plan_trv(
+        state,
+        trv(target=21.0),
+        target=21.0,
+        target_changed=False,
+        source=SetpointSource.SCHEDULE_COMFORT,
+        room_temperature=None,
+        compensation=False,
+        now=T0 + timedelta(minutes=10),
+        params=PARAMS,
+        duty_cycle_ok=True,
+    )
+    assert (command, manual) == (None, None)
+    assert state.last_seen == 21.0
+
+
 def test_window_function_of_thermostat_is_not_manual() -> None:
-    state = TrvState(last_written=21.0, last_write_at=T0)
+    state = TrvState(last_written=21.0, last_write_at=T0, last_seen=21.0)
     _, manual = plan_trv(
         state,
         trv(target=12.0),
@@ -324,8 +418,9 @@ def test_round_half() -> None:
 def test_runtime_roundtrip() -> None:
     rt = runtime()
     rt.override_temp, rt.override_until = 22.0, T0
-    rt.trvs["climate.x"] = TrvState(21.5, T0, 1.0, T0)
+    rt.trvs["climate.x"] = TrvState(21.5, T0, 1.0, T0, last_seen=21.0)
     restored = RoomRuntime.from_dict(rt.to_dict(), PARAMS)
+    assert restored.trvs["climate.x"].last_seen == 21.0
     assert restored.override_temp == 22.0
     assert restored.override_until == T0
     assert restored.trvs["climate.x"].offset == 1.0
