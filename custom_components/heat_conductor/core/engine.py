@@ -507,6 +507,14 @@ class HeatingEngine:
             if burner is not None
             else (decision.request_heat if snap.actuator_active else None)
         )
+        # The rooms learn from delivered heat, not from the flame: inside a release the
+        # burner pauses for its lock time while the radiators keep heating.
+        if snap.pump_on is not None:
+            room_heating: bool | None = snap.pump_on
+        elif snap.actuator_active:
+            room_heating = snap.relay_on if snap.relay_on is not None else decision.request_heat
+        else:
+            room_heating = heating
         for room in rooms:
             if room.kind is not RoomKind.REGULATED:
                 continue
@@ -515,7 +523,7 @@ class HeatingEngine:
                 temperature=room.temperature,
                 outdoor=outdoor.value,
                 valve=room.valve,
-                heating=heating,
+                heating=room_heating,
                 window_open=room.status is RoomStatus.WINDOW_OPEN,
             )
         self.learner.boiler.update(now, burner, outdoor.value)
